@@ -33,43 +33,62 @@
 </header>
 
 <main class="container">
-  <div class="page-header">
-    <h1>Panel de administración</h1>
-    <p>Busca animes reales en la <strong>Jikan API</strong> (MyAnimeList), agrégalos al catálogo de FicticionalTV y carga sus capítulos con el embed de tu reproductor. Todo se guarda solo en este navegador (localStorage) — es un panel de demostración, sin backend ni cuenta de usuario.</p>
-    <p class="admin-hint">
-      ¿Editaste <code>js/data.js</code> y no ves los cambios? Cada navegador guarda su propia copia local del catálogo.
-      <button class="btn btn-ghost btn-sm" id="reset-library-btn" type="button" style="margin-left:8px;">Restablecer datos de fábrica</button>
-    </p>
+
+  <div class="admin-auth-gate" id="admin-auth-gate">
+    <form class="admin-auth-card" id="admin-auth-form">
+      <h1>Panel de administración</h1>
+      <p>Este panel está protegido. Ingresa el código de acceso para continuar.</p>
+      <label>Código de acceso
+        <input class="input" type="password" inputmode="numeric" autocomplete="off" id="admin-auth-input" placeholder="••••" required>
+      </label>
+      <p class="admin-auth-error" id="admin-auth-error"></p>
+      <button class="btn btn-primary" type="submit">Entrar</button>
+    </form>
   </div>
 
-  <section class="admin-section">
-    <div class="section-head">
-      <h2>Agregar anime desde Jikan API</h2>
-      <div class="jikan-status-check">
-        <span class="pill pill-warn" id="jikan-ping-pill">Comprobando…</span>
-        <button class="btn btn-ghost btn-sm" id="jikan-ping-btn" type="button">Comprobar conexión</button>
+  <div id="admin-protected" style="display:none;">
+    <div class="page-header">
+      <div class="admin-header-row">
+        <h1>Panel de administración</h1>
+        <button class="btn btn-ghost btn-sm" id="admin-logout-btn" type="button" style="display:none;">Bloquear panel</button>
       </div>
+      <p>Busca animes reales en la <strong>AniList API</strong>, agrégalos al catálogo de FicticionalTV y carga sus capítulos con el embed de tu reproductor. Todo se guarda solo en este navegador (localStorage) — es un panel de demostración, sin backend real.</p>
+      <p class="admin-hint">
+        ¿Editaste <code>js/data.js</code> y no ves los cambios? Cada navegador guarda su propia copia local del catálogo.
+        <button class="btn btn-ghost btn-sm" id="reset-library-btn" type="button" style="margin-left:8px;">Restablecer datos de fábrica</button>
+      </p>
     </div>
-    <form class="admin-search-form" id="jikan-search-form">
-      <div class="nav-search admin-search-input" role="search">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>
-        <input type="search" id="jikan-search-input" placeholder="Buscar por título (ej. Fullmetal Alchemist)" aria-label="Buscar anime en Jikan">
-      </div>
-      <button class="btn btn-primary btn-sm" type="submit">Buscar</button>
-    </form>
-    <p class="admin-hint" id="jikan-status"></p>
-    <div class="jikan-results" id="jikan-results"></div>
-  </section>
 
-  <section class="admin-section">
-    <div class="section-head">
-      <h2>Mi biblioteca</h2>
-    </div>
-    <div class="admin-library-layout">
-      <div class="admin-anime-list" id="admin-anime-list"></div>
-      <div class="admin-anime-detail" id="admin-anime-detail"></div>
-    </div>
-  </section>
+    <section class="admin-section">
+      <div class="section-head">
+        <h2>Agregar anime desde AniList API</h2>
+        <div class="anilist-status-check">
+          <span class="pill pill-warn" id="anilist-ping-pill">Comprobando…</span>
+          <button class="btn btn-ghost btn-sm" id="anilist-ping-btn" type="button">Comprobar conexión</button>
+        </div>
+      </div>
+      <form class="admin-search-form" id="anilist-search-form">
+        <div class="nav-search admin-search-input" role="search">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>
+          <input type="search" id="anilist-search-input" placeholder="Buscar por título (ej. Fullmetal Alchemist)" aria-label="Buscar anime en AniList">
+        </div>
+        <button class="btn btn-primary btn-sm" type="submit">Buscar</button>
+      </form>
+      <p class="admin-hint" id="anilist-status"></p>
+      <div class="anilist-results" id="anilist-results"></div>
+    </section>
+
+    <section class="admin-section">
+      <div class="section-head">
+        <h2>Mi biblioteca</h2>
+      </div>
+      <div class="admin-library-layout">
+        <div class="admin-anime-list" id="admin-anime-list"></div>
+        <div class="admin-anime-detail" id="admin-anime-detail"></div>
+      </div>
+    </section>
+  </div>
+
 </main>
 
 <footer class="site-footer">
@@ -98,14 +117,17 @@
     </div>
     <div class="legal-note">
       <span>© 2026 FicticionalTV. Proyecto de demostración — todos los títulos y estudios son ficticios.</span>
-      <span>Los datos de anime provienen de la Jikan API (MyAnimeList) con fines de demostración.</span>
+      <span>Los datos de anime provienen de la AniList API con fines de demostración.</span>
     </div>
   </div>
 </footer>
 
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
 <script src="js/data.js"></script>
 <script src="js/store.js"></script>
-<script src="js/jikan.js"></script>
+<script src="js/anilist.js"></script>
 <script src="js/main.js"></script>
 <script src="js/admin.js"></script>
 </body>

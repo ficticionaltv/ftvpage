@@ -99,11 +99,14 @@
   </div>
 </footer>
 
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
 <script src="js/data.js"></script>
 <script src="js/store.js"></script>
 <script src="js/main.js"></script>
 <script>
-  document.addEventListener("DOMContentLoaded", () => {
+  function renderHomeRails() {
     const recent = ANIME_LIST.filter(a => a.recent);
     document.getElementById("rail-recent").innerHTML =
       recent.map(a => cardTemplate(a, { badge: "Nuevo" })).join("");
@@ -116,6 +119,12 @@
           ${cardTemplate(a)}
         </div>
       `).join("");
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    // ANIME_LIST llega de forma asíncrona desde Firestore.
+    onLibraryReady(renderHomeRails);
+    onLibraryChange(renderHomeRails);
   });
 </script>
 </body>
