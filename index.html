@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FicticionalTV — Anime gratis en HD</title>
+<meta name="description" content="FicticionalTV: catálogo de anime de acceso gratuito y comunidad. Contenido de demostración.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="nav container">
+    <a href="index.html" class="logo"><img src="img/logo.png" alt="FicticionalTV" class="logo-img" onerror="this.style.display=&#39;none&#39;;this.nextElementSibling.style.display=&#39;inline-flex&#39;"><span class="logo-fallback"><span>Fictic</span><span class="logo-accent">ional</span><span class="logo-dot">TV</span></span></a>
+    <ul class="nav-links">
+      <li><a href="index.html" aria-current="page">Inicio</a></li>
+      <li><a href="catalogo.html">Catálogo</a></li>
+      <li><a href="categorias.html">Categorías</a></li>
+      <li><a href="admin.html">Panel</a></li>
+    </ul>
+    <form class="nav-search" data-header-search role="search">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>
+      <input type="search" placeholder="Buscar animes..." aria-label="Buscar animes">
+    </form>
+    <div class="nav-actions">
+      <a href="catalogo.html" class="btn btn-primary btn-sm">Explorar</a>
+      <button class="nav-toggle" aria-label="Abrir menú" aria-expanded="false">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h16M3 11h16M3 16h16"/></svg>
+      </button>
+    </div>
+  </nav>
+</header>
+
+<main>
+  <section class="hero" data-hero>
+    <div class="hero-slides"></div>
+    <div class="hero-dots"></div>
+  </section>
+
+  <div class="container">
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Últimos episodios</h2>
+        <a href="catalogo.html" class="see-all">Ver todo →</a>
+      </div>
+      <div class="rail" id="rail-recent"></div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>Top 10 de la semana</h2>
+        <a href="catalogo.html" class="see-all">Ver todo →</a>
+      </div>
+      <div class="rail" id="rail-top"></div>
+    </section>
+
+    <section class="cta-banner">
+      <div>
+        <h2>Todo el catálogo, sin límites</h2>
+        <p>Explora el listado completo con filtros por género, popularidad y fecha de estreno.</p>
+      </div>
+      <a href="catalogo.html" class="btn btn-primary">Ver catálogo completo</a>
+    </section>
+
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="logo"><img src="img/logo.png" alt="FicticionalTV" class="logo-img" onerror="this.style.display=&#39;none&#39;;this.nextElementSibling.style.display=&#39;inline-flex&#39;"><span class="logo-fallback"><span>Fictic</span><span class="logo-accent">ional</span><span class="logo-dot">TV</span></span></a>
+        <p>FicticionalTV es una plataforma de demostración de acceso gratuito y comunidad, construida con datos de prueba con fines de diseño y desarrollo.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Explorar</h4>
+        <ul>
+          <li><a href="index.html">Inicio</a></li>
+          <li><a href="catalogo.html">Catálogo</a></li>
+          <li><a href="categorias.html">Categorías</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Comunidad</h4>
+        <ul>
+          <li><a href="#">Discord</a></li>
+          <li><a href="#">X / Twitter</a></li>
+          <li><a href="#">Instagram</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="legal-note">
+      <span>© 2026 FicticionalTV. Proyecto de demostración — todos los títulos y estudios son ficticios.</span>
+      <span>Plataforma de acceso gratuito y comunidad.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/data.js"></script>
+<script src="js/store.js"></script>
+<script src="js/main.js"></script>
+<script>
+  function renderHomeRails() {
+    const recent = ANIME_LIST.filter(a => a.recent);
+    document.getElementById("rail-recent").innerHTML =
+      recent.map(a => safeRender(() => cardTemplate(a, { badge: "Nuevo" }), a)).join("");
+
+    const top = [...ANIME_LIST].sort((a, b) => a.popularityRank - b.popularityRank).slice(0, 10);
+    document.getElementById("rail-top").innerHTML =
+      top.map((a, i) => safeRender(() => `
+        <div class="rank-card">
+          <span class="rank-number">${i + 1}</span>
+          ${cardTemplate(a)}
+        </div>
+      `, a)).join("");
+  }
+
+  // Si un anime tiene algún dato inesperado que rompa su tarjeta, lo
+  // saltamos (con un aviso en consola) en vez de dejar todo el riel vacío.
+  function safeRender(build, anime) {
+    try {
+      return build();
+    } catch (err) {
+      console.error(`FicticionalTV: no se pudo mostrar la tarjeta de "${anime && anime.title}" (datos incompletos o corruptos).`, err, anime);
+      return "";
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    // ANIME_LIST llega de forma asíncrona desde Firestore.
+    onLibraryReady(renderHomeRails);
+    onLibraryChange(renderHomeRails);
+  });
+</script>
+</body>
+</html>
