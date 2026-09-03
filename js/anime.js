@@ -35,6 +35,7 @@ function renderDetail(anime) {
   document.querySelector("#detail-poster").alt = `Portada de ${anime.title}`;
   document.querySelector("#detail-title").textContent = anime.title;
   document.querySelector("#detail-synopsis").textContent = anime.synopsis;
+  updateSynopsisToggle();
 
   document.querySelector("#detail-genres").innerHTML =
     anime.genres.map(g => `<span class="tag">${g}</span>`).join("");
@@ -72,6 +73,34 @@ function escapeHtml(str) {
     .replace(/</g, "&lt;");
 }
 
+/* La sinopsis se recorta a 3 líneas con CSS. Este toggle solo muestra
+   el botón "Más detalles" cuando el texto realmente está recortado,
+   y expande/contrae el párrafo al hacer clic. */
+function updateSynopsisToggle() {
+  const text = document.querySelector("#detail-synopsis");
+  const toggle = document.querySelector("#synopsis-toggle");
+  if (!text || !toggle) return;
+
+  text.classList.remove("is-expanded");
+  toggle.textContent = "Más detalles";
+
+  requestAnimationFrame(() => {
+    const isClamped = text.scrollHeight > text.clientHeight + 2;
+    toggle.style.display = isClamped ? "inline-flex" : "none";
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const toggle = document.querySelector("#synopsis-toggle");
+  if (!toggle) return;
+  toggle.addEventListener("click", () => {
+    const text = document.querySelector("#detail-synopsis");
+    if (!text) return;
+    const expanded = text.classList.toggle("is-expanded");
+    toggle.textContent = expanded ? "Ver menos" : "Más detalles";
+  });
+});
+
 /* El botón "Ver ahora" lleva directo al reproductor real (capitulo.html)
    del primer episodio disponible. Si todavía no hay episodios cargados,
    el botón se deshabilita en vez de fingir que hay algo que ver. */
@@ -79,18 +108,19 @@ function renderWatchCta(anime) {
   const episodes = [...anime.episodes].sort((a, b) => a.number - b.number);
   const first = episodes[0];
   const ctaWatch = document.querySelector("#cta-watch");
+  const ctaLabel = document.querySelector("#cta-watch-label");
   if (!ctaWatch) return;
 
   if (!first) {
     ctaWatch.removeAttribute("href");
     ctaWatch.classList.add("is-disabled");
-    ctaWatch.textContent = "Aún sin capítulos";
+    if (ctaLabel) ctaLabel.textContent = "Aún sin capítulos";
     return;
   }
 
   ctaWatch.href = `capitulo.html?id=${anime.id}&ep=${first.number}`;
   ctaWatch.classList.remove("is-disabled");
-  ctaWatch.textContent = "Ver ahora";
+  if (ctaLabel) ctaLabel.textContent = "Ver ahora";
 }
 
 function renderEpisodes(anime) {
