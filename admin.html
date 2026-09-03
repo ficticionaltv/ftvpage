@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de administración — FicticionalTV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <nav class="nav container">
+    <a href="index.html" class="logo"><span>Fictic</span><span class="logo-accent">ional</span><span class="logo-dot">TV</span></a>
+    <ul class="nav-links">
+      <li><a href="index.html">Inicio</a></li>
+      <li><a href="catalogo.html">Catálogo</a></li>
+      <li><a href="categorias.html">Categorías</a></li>
+      <li><a href="admin.html" aria-current="page">Panel</a></li>
+    </ul>
+    <form class="nav-search" data-header-search role="search">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>
+      <input type="search" placeholder="Buscar animes..." aria-label="Buscar animes">
+    </form>
+    <div class="nav-actions">
+      <a href="catalogo.html" class="btn btn-primary btn-sm">Explorar</a>
+      <button class="nav-toggle" aria-label="Abrir menú" aria-expanded="false">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h16M3 11h16M3 16h16"/></svg>
+      </button>
+    </div>
+  </nav>
+</header>
+
+<main class="container">
+  <div class="page-header">
+    <h1>Panel de administración</h1>
+    <p>Busca animes reales en la <strong>Jikan API</strong> (MyAnimeList), agrégalos al catálogo de FicticionalTV y carga sus capítulos con el embed de tu reproductor. Todo se guarda solo en este navegador (localStorage) — es un panel de demostración, sin backend ni cuenta de usuario.</p>
+  </div>
+
+  <section class="admin-section">
+    <div class="section-head">
+      <h2>Agregar anime desde Jikan API</h2>
+    </div>
+    <form class="admin-search-form" id="jikan-search-form">
+      <div class="nav-search admin-search-input" role="search">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>
+        <input type="search" id="jikan-search-input" placeholder="Buscar por título (ej. Fullmetal Alchemist)" aria-label="Buscar anime en Jikan">
+      </div>
+      <button class="btn btn-primary btn-sm" type="submit">Buscar</button>
+    </form>
+    <p class="admin-hint" id="jikan-status"></p>
+    <div class="jikan-results" id="jikan-results"></div>
+  </section>
+
+  <section class="admin-section">
+    <div class="section-head">
+      <h2>Mi biblioteca</h2>
+    </div>
+    <div class="admin-library-layout">
+      <div class="admin-anime-list" id="admin-anime-list"></div>
+      <div class="admin-anime-detail" id="admin-anime-detail"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="logo"><span>Fictic</span><span class="logo-accent">ional</span><span class="logo-dot">TV</span></a>
+        <p>FicticionalTV es una plataforma de demostración de acceso gratuito y comunidad, construida con datos de prueba con fines de diseño y desarrollo.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Explorar</h4>
+        <ul>
+          <li><a href="index.html">Inicio</a></li>
+          <li><a href="catalogo.html">Catálogo</a></li>
+          <li><a href="categorias.html">Categorías</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Comunidad</h4>
+        <ul>
+          <li><a href="#">Discord</a></li>
+          <li><a href="#">X / Twitter</a></li>
+          <li><a href="#">Instagram</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="legal-note">
+      <span>© 2026 FicticionalTV. Proyecto de demostración — todos los títulos y estudios son ficticios.</span>
+      <span>Los datos de anime provienen de la Jikan API (MyAnimeList) con fines de demostración.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="js/data.js"></script>
+<script src="js/store.js"></script>
+<script src="js/jikan.js"></script>
+<script src="js/main.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
