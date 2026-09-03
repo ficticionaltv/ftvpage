@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FicticionalTV — Ficha de anime</title>
+<link rel="icon" type="image/png" href="img/favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -42,10 +43,21 @@
         <div class="hero-genres" id="detail-genres"></div>
         <h1 id="detail-title"></h1>
         <div class="detail-meta" id="detail-meta"></div>
-        <p id="detail-synopsis"></p>
+        <div class="synopsis-card">
+          <p id="detail-synopsis" class="synopsis-text"></p>
+          <button type="button" class="synopsis-toggle" id="synopsis-toggle">Más detalles</button>
+        </div>
         <div class="detail-actions">
-          <a class="btn btn-primary is-disabled" id="cta-watch" href="#">Ver ahora</a>
-          <a class="btn btn-ghost" href="catalogo.html">Volver al catálogo</a>
+          <a class="btn btn-favorite is-disabled" id="cta-watch" href="#">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11l10-5.5-10-5.5z"/></svg>
+            <span id="cta-watch-label">Ver ahora</span>
+          </a>
+          <a class="btn-icon-action" href="catalogo.html">
+            <span class="btn-icon-action-icon">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3.5 5.5 9l5.5 5.5"/></svg>
+            </span>
+            <span>Volver al catálogo</span>
+          </a>
         </div>
       </div>
     </div>
@@ -71,7 +83,7 @@
     <div class="footer-grid">
       <div class="footer-brand">
         <a href="index.html" class="logo"><img src="img/logo.png" alt="FicticionalTV" class="logo-img" onerror="this.style.display=&#39;none&#39;;this.nextElementSibling.style.display=&#39;inline-flex&#39;"><span class="logo-fallback"><span>Fictic</span><span class="logo-accent">ional</span><span class="logo-dot">TV</span></span></a>
-        <p>FicticionalTV es una plataforma de demostración de acceso gratuito y comunidad, construida con datos de prueba con fines de diseño y desarrollo.</p>
+        <p>FicticionalTV: Lo Ficticio es Real... El mejor doblaje indie en español latino..</p>
       </div>
       <div class="footer-col">
         <h4>Explorar</h4>
@@ -84,15 +96,15 @@
       <div class="footer-col">
         <h4>Comunidad</h4>
         <ul>
-          <li><a href="#">Discord</a></li>
-          <li><a href="#">X / Twitter</a></li>
+          <li><a href="#">YouTube</a></li>
+          <li><a href="#">TikTok</a></li>
           <li><a href="#">Instagram</a></li>
         </ul>
       </div>
     </div>
     <div class="legal-note">
-      <span>© 2026 FicticionalTV. Proyecto de demostración — todos los títulos y estudios son ficticios.</span>
-      <span>Plataforma de acceso gratuito y comunidad.</span>
+      <span>© 2026 FicticionalTV.</span>
+      <span>Plataforma de acceso gratuito.</span>
     </div>
   </div>
 </footer>
