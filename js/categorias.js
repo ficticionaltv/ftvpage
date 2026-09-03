@@ -8,9 +8,17 @@ document.addEventListener("DOMContentLoaded", () => {
   renderGenreGrid();
   const params = new URLSearchParams(window.location.search);
   const preset = params.get("genero");
-  if (preset && GENRES.includes(preset)) {
-    selectGenre(preset);
-  }
+
+  // Los resultados por género dependen de ANIME_LIST, que llega de forma
+  // asíncrona desde Firestore.
+  onLibraryReady(() => {
+    if (preset && GENRES.includes(preset)) {
+      selectGenre(preset);
+    }
+  });
+  onLibraryChange(() => {
+    if (activeGenre) selectGenre(activeGenre);
+  });
 });
 
 function renderGenreGrid() {

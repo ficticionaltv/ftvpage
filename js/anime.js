@@ -5,13 +5,17 @@
    ============================================================ */
 
 document.addEventListener("DOMContentLoaded", () => {
-  const params = new URLSearchParams(window.location.search);
-  const id = params.get("id");
-  const anime = getAnimeById(id) || ANIME_LIST[0];
+  // ANIME_LIST llega de forma asíncrona desde Firestore.
+  onLibraryReady(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+    const anime = getAnimeById(id) || ANIME_LIST[0];
 
-  renderDetail(anime);
-  renderPlayerPreview(anime);
-  renderEpisodes(anime);
+    renderDetail(anime);
+    renderTrailer(anime);
+    renderPlayerPreview(anime);
+    renderEpisodes(anime);
+  });
 });
 
 function renderDetail(anime) {
@@ -35,6 +39,28 @@ function renderDetail(anime) {
     <span class="sep">|</span>
     <span>${anime.episodes.length} episodio${anime.episodes.length === 1 ? "" : "s"}</span>
   `;
+}
+
+function renderTrailer(anime) {
+  const container = document.querySelector("#trailer-container");
+  if (!container) return;
+
+  if (anime.trailerEmbedUrl) {
+    container.innerHTML = `
+      <div class="trailer-frame">
+        <iframe src="${anime.trailerEmbedUrl}" title="Tráiler de ${escapeHtml(anime.title)}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      </div>
+    `;
+  } else {
+    container.innerHTML = `<div class="trailer-empty">Todavía no hay tráiler disponible para este anime.</div>`;
+  }
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;");
 }
 
 function renderPlayerPreview(anime) {

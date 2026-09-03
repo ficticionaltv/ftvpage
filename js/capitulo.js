@@ -3,7 +3,8 @@
    ============================================================ */
 
 document.addEventListener("DOMContentLoaded", () => {
-  renderChapter();
+  // ANIME_LIST llega de forma asíncrona desde Firestore.
+  onLibraryReady(() => renderChapter());
 });
 
 function getChapterParams() {

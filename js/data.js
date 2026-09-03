@@ -35,7 +35,7 @@ function makeEpisodes(seed, count) {
 }
 
 /* Catálogo semilla. En tiempo de ejecución, js/store.js combina esta lista
-   con los animes agregados desde el panel (Jikan API) y con cualquier
+   con los animes agregados desde el panel (AniList API) y con cualquier
    cambio guardado en localStorage, exponiendo todo a través de ANIME_LIST. */
 const SEED_ANIME_LIST = [
   {
@@ -190,5 +190,6 @@ SEED_ANIME_LIST.forEach(a => {
   a.banner = bannerUrl(a.id);
   a.episodes = makeEpisodes(a.id, a.episodesCount);
   a.source = "seed";
-  a.malId = null;
+  a.anilistId = null;
+  a.trailerEmbedUrl = null; // los animes de la semilla son ficticios y no tienen tráiler real
 });

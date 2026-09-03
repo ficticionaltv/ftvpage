@@ -1,13 +1,22 @@
 /* ============================================================
-   FicticionalTV — Almacén de datos (localStorage)
+   FicticionalTV — Almacén de datos (Firebase Firestore)
    Combina el catálogo semilla (js/data.js) con los animes y
    capítulos agregados desde el panel de administración
-   (js/admin.js + js/jikan.js). Toda la app lee/escribe a través
+   (js/admin.js + js/anilist.js). Toda la app lee/escribe a través
    de las funciones de este archivo, así que debe cargarse
-   siempre después de data.js y antes de main.js.
+   siempre después de js/firebase-config.js y js/data.js, y antes
+   de main.js.
+
+   A diferencia de la versión anterior (que guardaba todo en
+   localStorage, es decir, solo en el navegador de cada quien),
+   ahora todo se guarda en un documento de Firestore. Así, un
+   cambio hecho desde el panel de administración en un dispositivo
+   se ve igual para todo el mundo, en cualquier navegador, casi en
+   tiempo real (gracias a onSnapshot).
    ============================================================ */
 
-const LIB_KEY = "ficticionaltv_library_v1";
+const LIB_COLLECTION = "ficticionaltv";
+const LIB_DOC_ID = "library";
 
 function slugify(str) {
   return (
@@ -27,46 +36,89 @@ function cloneSeedLibrary() {
   }));
 }
 
-function loadLibrary() {
-  try {
-    const raw = localStorage.getItem(LIB_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch (err) {
-    console.warn("FicticionalTV: no se pudo leer la biblioteca guardada.", err);
-  }
-  const seeded = cloneSeedLibrary();
-  saveLibrary(seeded);
-  return seeded;
-}
-
-function saveLibrary(list) {
-  try {
-    localStorage.setItem(LIB_KEY, JSON.stringify(list));
-  } catch (err) {
-    console.warn("FicticionalTV: no se pudo guardar la biblioteca.", err);
-  }
-}
-
 /* Lista global usada por el resto de los scripts (main.js, catalogo.js,
    categorias.js, anime.js, capitulo.js, admin.js) tal como antes lo hacía
-   data.js, pero ahora persistida en localStorage. */
-let ANIME_LIST = loadLibrary();
+   data.js. Arranca con el catálogo semilla como respaldo inmediato
+   mientras llega la primera respuesta real de Firestore. */
+let ANIME_LIST = cloneSeedLibrary();
+let libraryReady = false;
 
-function refreshAnimeList() {
-  ANIME_LIST = loadLibrary();
-  return ANIME_LIST;
+function libraryDocRef() {
+  return db.collection(LIB_COLLECTION).doc(LIB_DOC_ID);
+}
+
+/* Se conecta a Firestore y se suscribe en tiempo real al documento de
+   la biblioteca. La primera vez que llega una respuesta se dispara el
+   evento "ficticionaltv:library-ready"; cualquier cambio posterior
+   (hecho desde este dispositivo o desde cualquier otro) dispara
+   "ficticionaltv:library-updated". */
+function startLibrarySync() {
+  const ref = libraryDocRef();
+
+  // Si el documento todavía no existe en Firestore (primera vez que
+  // se usa el proyecto), lo creamos con el catálogo semilla.
+  ref.get().then(snap => {
+    if (!snap.exists) {
+      return ref.set({
+        items: cloneSeedLibrary(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+  }).catch(err => {
+    console.error("FicticionalTV: no se pudo inicializar la biblioteca en Firebase.", err);
+  });
+
+  ref.onSnapshot(docSnap => {
+    if (docSnap.exists) {
+      const data = docSnap.data();
+      ANIME_LIST = Array.isArray(data.items) ? data.items : [];
+    }
+    const firstLoad = !libraryReady;
+    libraryReady = true;
+    window.dispatchEvent(new CustomEvent(firstLoad ? "ficticionaltv:library-ready" : "ficticionaltv:library-updated"));
+  }, err => {
+    console.error("FicticionalTV: se perdió la conexión en tiempo real con Firebase; se usará el catálogo semilla como respaldo local.", err);
+    if (!libraryReady) {
+      libraryReady = true;
+      window.dispatchEvent(new CustomEvent("ficticionaltv:library-ready"));
+    }
+  });
+}
+
+startLibrarySync();
+
+/* Ejecuta callback(ANIME_LIST) en cuanto la biblioteca esté lista (si ya
+   lo está, se ejecuta de inmediato; si no, en cuanto llegue la primera
+   respuesta de Firestore). Úsalo para el primer render de cada página,
+   ya que la carga desde Firestore es asíncrona. */
+function onLibraryReady(callback) {
+  if (libraryReady) { callback(ANIME_LIST); return; }
+  window.addEventListener("ficticionaltv:library-ready", () => callback(ANIME_LIST), { once: true });
+}
+
+/* Ejecuta callback(ANIME_LIST) cada vez que la biblioteca cambia después
+   de la carga inicial (por ejemplo, porque alguien agregó un anime desde
+   el panel en otro dispositivo). Úsalo en páginas donde tiene sentido
+   refrescar la vista sola. */
+function onLibraryChange(callback) {
+  window.addEventListener("ficticionaltv:library-updated", () => callback(ANIME_LIST));
 }
 
 function persist() {
-  saveLibrary(ANIME_LIST);
+  libraryDocRef().set({
+    items: ANIME_LIST,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).catch(err => {
+    console.warn("FicticionalTV: no se pudo guardar la biblioteca en Firebase.", err);
+  });
 }
 
 function getAnimeById(id) {
   return ANIME_LIST.find(a => a.id === id);
 }
 
-function animeExistsByMalId(malId) {
-  return malId != null && ANIME_LIST.some(a => a.malId === malId);
+function animeExistsByAnilistId(anilistId) {
+  return anilistId != null && ANIME_LIST.some(a => a.anilistId === anilistId);
 }
 
 function nextPopularityRank() {
@@ -75,8 +127,8 @@ function nextPopularityRank() {
     : 1;
 }
 
-/* Agrega un anime (normalmente proveniente de mapJikanItem()) a la
-   biblioteca local. Genera un id único basado en el título. */
+/* Agrega un anime (normalmente proveniente de mapAniListItem()) a la
+   biblioteca. Genera un id único basado en el título. */
 function addAnimeToLibrary(anime) {
   const base = slugify(anime.title);
   let id = base;
@@ -95,9 +147,10 @@ function addAnimeToLibrary(anime) {
     recent: true,
     cover: anime.cover || coverUrl(id),
     banner: anime.banner || anime.cover || bannerUrl(id),
+    trailerEmbedUrl: anime.trailerEmbedUrl || null,
     episodes: [],
-    source: "jikan",
-    malId: anime.malId != null ? anime.malId : null
+    source: "anilist",
+    anilistId: anime.anilistId != null ? anime.anilistId : null
   };
 
   ANIME_LIST.push(record);
@@ -110,14 +163,13 @@ function removeAnimeFromLibrary(id) {
   persist();
 }
 
-/* Borra todo lo guardado en este navegador y vuelve a partir del
-   catálogo semilla de data.js. Útil en desarrollo cuando editas
-   data.js y el navegador sigue mostrando una copia vieja guardada
-   en localStorage (cada navegador/perfil tiene la suya). */
+/* Borra todo lo guardado en Firestore y vuelve a partir del catálogo
+   semilla de data.js. Como ahora el almacenamiento es compartido, esto
+   afecta a todo el mundo, no solo a este navegador. */
 function resetLibraryToSeed() {
   const seeded = cloneSeedLibrary();
   ANIME_LIST = seeded;
-  saveLibrary(seeded);
+  persist();
   return seeded;
 }
 

@@ -17,7 +17,9 @@ document.addEventListener("DOMContentLoaded", () => {
   searchInput.addEventListener("input", () => { currentPage = 1; render(); });
   sortSelect.addEventListener("change", () => { currentPage = 1; render(); });
 
-  render();
+  // ANIME_LIST llega de forma asíncrona desde Firestore.
+  onLibraryReady(() => render());
+  onLibraryChange(() => render());
 });
 
 function render() {

@@ -6,7 +6,11 @@ document.addEventListener("DOMContentLoaded", () => {
   initHeaderScroll();
   initMobileNav();
   initHeaderSearch();
-  initHeroSlider();
+  // El slider depende de ANIME_LIST, que ahora llega de forma asíncrona
+  // desde Firestore: se renderiza en cuanto está lista y se vuelve a
+  // renderizar si otro dispositivo cambia la biblioteca.
+  onLibraryReady(() => initHeroSlider());
+  onLibraryChange(() => initHeroSlider());
 });
 
 /* Header: sombra/fondo sólido al hacer scroll */
@@ -43,9 +47,15 @@ function initHeaderSearch() {
 /* ------------------------------------------------------------
    Hero slider (home)
    ------------------------------------------------------------ */
+let heroTimer = null;
+
 function initHeroSlider() {
   const hero = document.querySelector("[data-hero]");
   if (!hero || typeof ANIME_LIST === "undefined") return;
+
+  // Si ya había un slider corriendo (por ejemplo, se está re-renderizando
+  // porque llegó una actualización de Firestore), evita duplicar el timer.
+  if (heroTimer) { clearInterval(heroTimer); heroTimer = null; }
 
   const featured = ANIME_LIST.slice(0, 5);
   const slidesEl = hero.querySelector(".hero-slides");
@@ -90,10 +100,10 @@ function initHeroSlider() {
 
   dots.forEach((dot, i) => dot.addEventListener("click", () => { goTo(i); resetTimer(); }));
 
-  let timer = setInterval(() => goTo(current + 1), 6500);
+  heroTimer = setInterval(() => goTo(current + 1), 6500);
   function resetTimer() {
-    clearInterval(timer);
-    timer = setInterval(() => goTo(current + 1), 6500);
+    clearInterval(heroTimer);
+    heroTimer = setInterval(() => goTo(current + 1), 6500);
   }
 }
 

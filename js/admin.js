@@ -1,23 +1,80 @@
 /* ============================================================
    FicticionalTV — Panel de administración
-   - Busca animes en Jikan API y los agrega a la biblioteca local.
+   - Protegido con un código de acceso simple (ver ADMIN_ACCESS_CODE).
+   - Busca animes en AniList API y los agrega a la biblioteca local.
    - Permite crear, editar y eliminar capítulos (con su embed).
-   Todo se guarda en localStorage (sin backend ni login).
+   Todo se guarda en localStorage (sin backend ni cuenta de usuario;
+   la autenticación es solo una barrera de acceso local, no seguridad real).
    ============================================================ */
+
+const ADMIN_ACCESS_CODE = "7891";
+const ADMIN_AUTH_KEY = "ficticionaltv_admin_auth";
 
 let lastSearchResults = [];
 let selectedAnimeId = null;
 let editingEpisodeNumber = null;
 
 document.addEventListener("DOMContentLoaded", () => {
+  const gate = document.querySelector("#admin-auth-gate");
+  const protectedRoot = document.querySelector("#admin-protected");
+  const form = document.querySelector("#admin-auth-form");
+  const input = document.querySelector("#admin-auth-input");
+  const error = document.querySelector("#admin-auth-error");
+  const logoutBtn = document.querySelector("#admin-logout-btn");
+
+  function unlock() {
+    sessionStorage.setItem(ADMIN_AUTH_KEY, "1");
+    if (gate) gate.style.display = "none";
+    if (protectedRoot) protectedRoot.style.display = "";
+    if (logoutBtn) logoutBtn.style.display = "";
+    // ANIME_LIST llega de forma asíncrona desde Firestore.
+    onLibraryReady(() => initAdminPanel());
+  }
+
+  if (sessionStorage.getItem(ADMIN_AUTH_KEY) === "1") {
+    unlock();
+  } else if (gate) {
+    gate.style.display = "";
+    if (protectedRoot) protectedRoot.style.display = "none";
+    if (input) setTimeout(() => input.focus(), 50);
+  }
+
+  if (form) {
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const value = (input.value || "").trim();
+      if (value === ADMIN_ACCESS_CODE) {
+        if (error) error.textContent = "";
+        form.reset();
+        unlock();
+      } else {
+        if (error) error.textContent = "Código incorrecto. Intenta de nuevo.";
+        input.value = "";
+        input.focus();
+      }
+    });
+  }
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      sessionStorage.removeItem(ADMIN_AUTH_KEY);
+      window.location.reload();
+    });
+  }
+});
+
+/* ------------------------------------------------------------
+   Inicialización del panel (solo tras autenticarse)
+   ------------------------------------------------------------ */
+function initAdminPanel() {
   const params = new URLSearchParams(window.location.search);
   selectedAnimeId = params.get("id") || null;
 
-  document.querySelector("#jikan-search-form").addEventListener("submit", handleSearch);
+  document.querySelector("#anilist-search-form").addEventListener("submit", handleSearch);
 
-  const pingBtn = document.querySelector("#jikan-ping-btn");
-  if (pingBtn) pingBtn.addEventListener("click", checkJikanStatus);
-  checkJikanStatus(); // comprobación automática al entrar al panel
+  const pingBtn = document.querySelector("#anilist-ping-btn");
+  if (pingBtn) pingBtn.addEventListener("click", checkAniListStatus);
+  checkAniListStatus(); // comprobación automática al entrar al panel
 
   const resetBtn = document.querySelector("#reset-library-btn");
   if (resetBtn) {
@@ -27,8 +84,8 @@ document.addEventListener("DOMContentLoaded", () => {
       selectedAnimeId = null;
       editingEpisodeNumber = null;
       lastSearchResults = [];
-      document.querySelector("#jikan-results").innerHTML = "";
-      document.querySelector("#jikan-status").textContent = "";
+      document.querySelector("#anilist-results").innerHTML = "";
+      document.querySelector("#anilist-status").textContent = "";
       renderAnimeList();
       renderAnimeDetail();
     });
@@ -36,38 +93,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
   renderAnimeList();
   renderAnimeDetail();
-});
+}
 
 /* ------------------------------------------------------------
-   Ping de Jikan (comprobar que la API responde)
+   Ping de AniList (comprobar que la API responde)
    ------------------------------------------------------------ */
-async function checkJikanStatus() {
-  const pill = document.querySelector("#jikan-ping-pill");
-  const btn = document.querySelector("#jikan-ping-btn");
+async function checkAniListStatus() {
+  const pill = document.querySelector("#anilist-ping-pill");
+  const btn = document.querySelector("#anilist-ping-btn");
   if (!pill) return;
 
   pill.className = "pill pill-warn";
   pill.textContent = "Comprobando…";
   if (btn) btn.disabled = true;
 
-  const result = await pingJikan();
+  const result = await pingAniList();
 
   if (result.ok) {
     pill.className = "pill pill-ok";
-    pill.textContent = `Jikan en línea (${result.ms} ms)`;
+    pill.textContent = `AniList en línea (${result.ms} ms)`;
   } else if (result.status) {
     pill.className = "pill pill-warn";
-    pill.textContent = `Jikan responde con errores (código ${result.status})`;
+    pill.textContent = `AniList responde con errores (código ${result.status})`;
   } else {
     pill.className = "pill pill-down";
-    pill.textContent = "Sin conexión con Jikan";
+    pill.textContent = "Sin conexión con AniList";
   }
 
   if (btn) btn.disabled = false;
 }
 
 /* ------------------------------------------------------------
-   Búsqueda en Jikan
+   Búsqueda en AniList
    ------------------------------------------------------------ */
 let searchInFlight = false;
 
@@ -75,21 +132,21 @@ async function handleSearch(e) {
   e.preventDefault();
   if (searchInFlight) return; // evita disparar varias búsquedas a la vez (dispara 429)
 
-  const input = document.querySelector("#jikan-search-input");
+  const input = document.querySelector("#anilist-search-input");
   const query = input.value.trim();
-  const status = document.querySelector("#jikan-status");
-  const resultsEl = document.querySelector("#jikan-results");
-  const submitBtn = document.querySelector("#jikan-search-form button[type=submit]");
+  const status = document.querySelector("#anilist-status");
+  const resultsEl = document.querySelector("#anilist-results");
+  const submitBtn = document.querySelector("#anilist-search-form button[type=submit]");
 
   if (!query) return;
 
   searchInFlight = true;
   submitBtn.disabled = true;
-  status.textContent = "Buscando en Jikan…";
+  status.textContent = "Buscando en AniList…";
   resultsEl.innerHTML = "";
 
   try {
-    lastSearchResults = await searchJikanAnime(query);
+    lastSearchResults = await searchAniListAnime(query);
     if (!lastSearchResults.length) {
       status.textContent = `Sin resultados para "${query}".`;
       return;
@@ -98,44 +155,45 @@ async function handleSearch(e) {
     renderSearchResults();
   } catch (err) {
     console.error(err);
-    status.textContent = describeJikanError(err);
+    status.textContent = describeAniListError(err);
   } finally {
     searchInFlight = false;
     submitBtn.disabled = false;
   }
 }
 
-function describeJikanError(err) {
+function describeAniListError(err) {
   if (err && err.message === "network") {
     if (window.location.protocol === "file:") {
-      return "No se pudo conectar con Jikan porque la página se abrió con doble clic (protocolo file://). Los navegadores bloquean las peticiones a APIs externas en ese modo: sirve la carpeta con un servidor local (por ejemplo \"python3 -m http.server\" o la extensión Live Server) y vuelve a intentarlo.";
+      return "No se pudo conectar con AniList porque la página se abrió con doble clic (protocolo file://). Los navegadores bloquean las peticiones a APIs externas en ese modo: sirve la carpeta con un servidor local (por ejemplo \"python3 -m http.server\" o la extensión Live Server) y vuelve a intentarlo.";
     }
-    return "No se pudo conectar con la API de Jikan (fallo de red o CORS). Revisa tu conexión a internet y vuelve a intentarlo.";
+    return "No se pudo conectar con la API de AniList (fallo de red o CORS). Revisa tu conexión a internet y vuelve a intentarlo.";
   }
   if (err && err.status === 429) {
-    return "Jikan está limitando las peticiones (demasiadas búsquedas seguidas). Espera unos segundos e intenta de nuevo.";
+    return "AniList está limitando las peticiones (demasiadas búsquedas seguidas). Espera unos segundos e intenta de nuevo.";
   }
   if (err && [502, 503, 504].includes(err.status)) {
-    return "La API de Jikan está teniendo problemas temporales en su servidor (no es algo de tu sitio). Espera un momento y vuelve a buscar; si sigue fallando, revisa https://status.jikan.moe.";
+    return "La API de AniList está teniendo problemas temporales en su servidor (no es algo de tu sitio). Espera un momento y vuelve a buscar; si sigue fallando, revisa https://status.anilist.co.";
   }
   if (err && err.status) {
-    return `Jikan respondió con un error (código ${err.status}). Intenta de nuevo en unos segundos.`;
+    return `AniList respondió con un error (código ${err.status}). Intenta de nuevo en unos segundos.`;
   }
-  return "No se pudo completar la búsqueda en Jikan. Intenta de nuevo en unos segundos.";
+  return "No se pudo completar la búsqueda en AniList. Intenta de nuevo en unos segundos.";
 }
 
 function renderSearchResults() {
-  const resultsEl = document.querySelector("#jikan-results");
+  const resultsEl = document.querySelector("#anilist-results");
 
   resultsEl.innerHTML = lastSearchResults.map((item, i) => {
-    const added = animeExistsByMalId(item.malId);
+    const added = animeExistsByAnilistId(item.anilistId);
     return `
-      <div class="jikan-card">
+      <div class="anilist-card">
         <img src="${item.cover || 'img/'}" alt="Portada de ${escapeAttr(item.title)}" loading="lazy" onerror="this.style.visibility='hidden'">
-        <div class="jikan-card-body">
+        <div class="anilist-card-body">
           <h3>${item.title}</h3>
-          <p class="jikan-card-meta">${item.year || "Año desconocido"} · ${item.studio}${item.rating ? " · ★ " + item.rating.toFixed(1) : ""}</p>
-          <div class="jikan-card-genres">${item.genres.slice(0, 4).map(g => `<span class="tag">${g}</span>`).join("")}</div>
+          <p class="anilist-card-meta">${item.year || "Año desconocido"} · ${item.studio}${item.rating ? " · ★ " + item.rating.toFixed(1) : ""}</p>
+          <div class="anilist-card-genres">${item.genres.slice(0, 4).map(g => `<span class="tag">${g}</span>`).join("")}</div>
+          <p class="anilist-card-meta">${item.trailerEmbedUrl ? "🎬 Con tráiler" : "Sin tráiler disponible"}</p>
           <button class="btn ${added ? "btn-ghost" : "btn-primary"} btn-sm" data-add="${i}" ${added ? "disabled" : ""}>
             ${added ? "Ya está en tu biblioteca" : "Agregar a la biblioteca"}
           </button>
@@ -170,7 +228,7 @@ function renderAnimeList() {
       <img src="${a.cover}" alt="">
       <span>
         <strong>${a.title}</strong>
-        <small>${a.episodes.length} capítulo${a.episodes.length === 1 ? "" : "s"} · ${a.source === "jikan" ? "Jikan" : "Semilla"}</small>
+        <small>${a.episodes.length} capítulo${a.episodes.length === 1 ? "" : "s"} · ${a.source === "anilist" ? "AniList" : "Semilla"}</small>
       </span>
     </button>
   `).join("");
@@ -193,7 +251,7 @@ function renderAnimeDetail() {
   const anime = selectedAnimeId ? getAnimeById(selectedAnimeId) : null;
 
   if (!anime) {
-    detailEl.innerHTML = `<p class="admin-empty">Selecciona un anime de la lista (o agrega uno nuevo desde Jikan arriba) para gestionar sus capítulos.</p>`;
+    detailEl.innerHTML = `<p class="admin-empty">Selecciona un anime de la lista (o agrega uno nuevo desde AniList arriba) para gestionar sus capítulos.</p>`;
     return;
   }
 
@@ -206,8 +264,9 @@ function renderAnimeDetail() {
       <img src="${anime.cover}" alt="Portada de ${escapeAttr(anime.title)}">
       <div>
         <h3>${anime.title}</h3>
-        <p class="jikan-card-meta">${anime.year} · ${anime.studio} · ★ ${anime.rating.toFixed(1)}</p>
+        <p class="anilist-card-meta">${anime.year} · ${anime.studio} · ★ ${anime.rating.toFixed(1)}</p>
         <div class="hero-genres">${anime.genres.map(g => `<span class="tag">${g}</span>`).join("")}</div>
+        <p class="pill ${anime.trailerEmbedUrl ? "pill-ok" : "pill-warn"}">${anime.trailerEmbedUrl ? "Con tráiler" : "Sin tráiler"}</p>
         <div class="admin-anime-actions">
           <a class="btn btn-ghost btn-sm" href="anime.html?id=${anime.id}" target="_blank" rel="noopener">Ver ficha</a>
           <button class="btn btn-ghost btn-sm" id="delete-anime-btn" type="button">Eliminar anime</button>
