@@ -43,17 +43,59 @@ function cloneSeedLibrary() {
 let ANIME_LIST = cloneSeedLibrary();
 let libraryReady = false;
 
+/* "connecting" mientras esperamos la primera respuesta, "online" en
+   cuanto Firestore contesta con datos reales, "offline" si nunca
+   contestó y tuvimos que arrancar con el catálogo semilla local (sin
+   guardar cambios de verdad hasta reconectar). Útil para mostrar un
+   indicador de estado en el panel de administración. */
+let libraryConnectionStatus = "connecting";
+
 function libraryDocRef() {
   return db.collection(LIB_COLLECTION).doc(LIB_DOC_ID);
+}
+
+function getLibraryConnectionStatus() {
+  return libraryConnectionStatus;
+}
+
+/* Avisa cuando cambia el estado de conexión con Firebase (para pintar
+   un pill de estado tipo "conectado / sin conexión" en el panel). */
+function onLibraryConnectionChange(callback) {
+  window.addEventListener("ficticionaltv:library-connection", () => callback(libraryConnectionStatus));
+}
+
+function setConnectionStatus(status) {
+  if (libraryConnectionStatus === status) return;
+  libraryConnectionStatus = status;
+  window.dispatchEvent(new CustomEvent("ficticionaltv:library-connection"));
 }
 
 /* Se conecta a Firestore y se suscribe en tiempo real al documento de
    la biblioteca. La primera vez que llega una respuesta se dispara el
    evento "ficticionaltv:library-ready"; cualquier cambio posterior
    (hecho desde este dispositivo o desde cualquier otro) dispara
-   "ficticionaltv:library-updated". */
+   "ficticionaltv:library-updated".
+
+   IMPORTANTE: si Firestore nunca responde (por ejemplo, porque la base
+   de datos todavía no existe en la consola de Firebase, las reglas la
+   están bloqueando, o no hay red), un onSnapshot() colgado se queda
+   esperando en silencio, SIN llamar ni al callback de éxito ni al de
+   error. Para que el resto de la app (panel de admin incluido) nunca
+   se quede congelada esperando para siempre, forzamos "library-ready"
+   con el catálogo semilla local después de unos segundos si Firestore
+   no dio señales de vida. */
 function startLibrarySync() {
   const ref = libraryDocRef();
+
+  const READY_TIMEOUT_MS = 7000;
+  const readyFallbackTimer = setTimeout(() => {
+    if (!libraryReady) {
+      console.warn("FicticionalTV: Firebase no respondió a tiempo (¿ya creaste la base de datos Firestore y configuraste sus reglas en la consola?). Se usará el catálogo semilla como respaldo temporal; los cambios no se guardarán hasta reconectar.");
+      libraryReady = true;
+      setConnectionStatus("offline");
+      window.dispatchEvent(new CustomEvent("ficticionaltv:library-ready"));
+    }
+  }, READY_TIMEOUT_MS);
 
   // Si el documento todavía no existe en Firestore (primera vez que
   // se usa el proyecto), lo creamos con el catálogo semilla.
@@ -69,15 +111,19 @@ function startLibrarySync() {
   });
 
   ref.onSnapshot(docSnap => {
+    clearTimeout(readyFallbackTimer);
     if (docSnap.exists) {
       const data = docSnap.data();
       ANIME_LIST = Array.isArray(data.items) ? data.items : [];
     }
     const firstLoad = !libraryReady;
     libraryReady = true;
+    setConnectionStatus("online");
     window.dispatchEvent(new CustomEvent(firstLoad ? "ficticionaltv:library-ready" : "ficticionaltv:library-updated"));
   }, err => {
+    clearTimeout(readyFallbackTimer);
     console.error("FicticionalTV: se perdió la conexión en tiempo real con Firebase; se usará el catálogo semilla como respaldo local.", err);
+    setConnectionStatus("offline");
     if (!libraryReady) {
       libraryReady = true;
       window.dispatchEvent(new CustomEvent("ficticionaltv:library-ready"));
@@ -161,6 +207,17 @@ function addAnimeToLibrary(anime) {
 function removeAnimeFromLibrary(id) {
   ANIME_LIST = ANIME_LIST.filter(a => a.id !== id);
   persist();
+}
+
+/* Actualiza el tráiler de un anime (URL de embed, para el <iframe> de la
+   ficha). Se usa desde el panel de administración para poner un tráiler
+   propio, sin depender de lo que traiga AniList. */
+function updateAnimeTrailer(animeId, trailerEmbedUrl) {
+  const anime = getAnimeById(animeId);
+  if (!anime) return null;
+  anime.trailerEmbedUrl = trailerEmbedUrl && trailerEmbedUrl.trim() ? trailerEmbedUrl.trim() : null;
+  persist();
+  return anime;
 }
 
 /* Borra todo lo guardado en Firestore y vuelve a partir del catálogo

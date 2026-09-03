@@ -14,7 +14,29 @@ let lastSearchResults = [];
 let selectedAnimeId = null;
 let editingEpisodeNumber = null;
 
+/* ------------------------------------------------------------
+   Estado de conexión con Firebase (independiente del gate de acceso,
+   así se ve incluso si Firestore tarda o falla en conectar)
+   ------------------------------------------------------------ */
+function renderFirebaseStatus(status) {
+  const pill = document.querySelector("#firebase-status-pill");
+  if (!pill) return;
+  if (status === "online") {
+    pill.className = "pill pill-ok";
+    pill.textContent = "Conectado a Firebase — los cambios se guardan para todo el mundo";
+  } else if (status === "offline") {
+    pill.className = "pill pill-down";
+    pill.textContent = "Sin conexión con Firebase — revisa que la base de datos Firestore exista y sus reglas permitan el acceso. Los cambios de esta sesión NO se guardarán.";
+  } else {
+    pill.className = "pill pill-warn";
+    pill.textContent = "Conectando con Firebase…";
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  renderFirebaseStatus(getLibraryConnectionStatus());
+  onLibraryConnectionChange(renderFirebaseStatus);
+
   const gate = document.querySelector("#admin-auth-gate");
   const protectedRoot = document.querySelector("#admin-protected");
   const form = document.querySelector("#admin-auth-form");
@@ -93,6 +115,14 @@ function initAdminPanel() {
 
   renderAnimeList();
   renderAnimeDetail();
+
+  // Si Firestore confirma el cambio (o llega un cambio desde otro
+  // dispositivo/pestaña), refresca la lista y el detalle para que el
+  // panel siempre muestre exactamente lo que hay guardado.
+  onLibraryChange(() => {
+    renderAnimeList();
+    renderAnimeDetail();
+  });
 }
 
 /* ------------------------------------------------------------
@@ -274,6 +304,17 @@ function renderAnimeDetail() {
       </div>
     </div>
 
+    <h4 class="admin-subhead">Tráiler</h4>
+    <form class="admin-episode-form" id="trailer-form">
+      <label>URL del tráiler (link normal de YouTube/Dailymotion, o una URL de embed)
+        <input class="input" type="url" id="trailer-url" value="${escapeAttr(anime.trailerEmbedUrl || "")}" placeholder="https://www.youtube.com/watch?v=xxxxxxxx">
+      </label>
+      <p class="admin-hint">Pega el link tal cual lo copias del navegador (de YouTube o Dailymotion) — se convierte automáticamente al formato de reproductor. Déjalo vacío y guarda para quitar el tráiler.</p>
+      <div class="admin-anime-actions">
+        <button class="btn btn-primary btn-sm" type="submit">Guardar tráiler</button>
+      </div>
+    </form>
+
     <h4 class="admin-subhead">${editing ? `Editando episodio ${editing.number}` : "Agregar capítulo"}</h4>
     <form class="admin-episode-form" id="episode-form">
       <div class="form-row">
@@ -317,6 +358,7 @@ function renderAnimeDetail() {
   `;
 
   document.querySelector("#episode-form").addEventListener("submit", handleEpisodeSubmit);
+  document.querySelector("#trailer-form").addEventListener("submit", handleTrailerSubmit);
 
   const cancelBtn = document.querySelector("#cancel-edit-btn");
   if (cancelBtn) {
@@ -369,6 +411,18 @@ function handleEpisodeSubmit(e) {
   renderAnimeDetail();
 }
 
+function handleTrailerSubmit(e) {
+  e.preventDefault();
+  const anime = getAnimeById(selectedAnimeId);
+  if (!anime) return;
+
+  const rawUrl = document.querySelector("#trailer-url").value.trim();
+  const embedUrl = normalizeTrailerUrl(rawUrl);
+
+  updateAnimeTrailer(anime.id, embedUrl);
+  renderAnimeDetail();
+}
+
 function handleDeleteAnime(id) {
   const anime = getAnimeById(id);
   if (!anime) return;
@@ -386,4 +440,42 @@ function escapeAttr(str) {
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;");
+}
+
+/* Convierte un link normal de YouTube o Dailymotion (el que copias de la
+   barra de direcciones) en la URL de "embed" que necesita el <iframe>.
+   Si ya es una URL de embed, o es de otro proveedor, se deja tal cual. */
+function normalizeTrailerUrl(rawUrl) {
+  const url = (rawUrl || "").trim();
+  if (!url) return "";
+
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+
+    if (host === "youtu.be") {
+      const id = u.pathname.slice(1);
+      if (id) return `https://www.youtube.com/embed/${id}`;
+    }
+    if (host === "youtube.com" || host === "m.youtube.com") {
+      if (u.pathname === "/watch" && u.searchParams.get("v")) {
+        return `https://www.youtube.com/embed/${u.searchParams.get("v")}`;
+      }
+      if (u.pathname.startsWith("/embed/")) return url; // ya es un embed
+      if (u.pathname.startsWith("/shorts/")) {
+        const id = u.pathname.split("/")[2];
+        if (id) return `https://www.youtube.com/embed/${id}`;
+      }
+    }
+    if (host === "dailymotion.com") {
+      if (u.pathname.startsWith("/embed/")) return url; // ya es un embed
+      const match = u.pathname.match(/\/video\/([^_/]+)/);
+      if (match) return `https://www.dailymotion.com/embed/video/${match[1]}`;
+    }
+  } catch (err) {
+    // URL inválida: la dejamos tal cual, el navegador simplemente no
+    // podrá cargarla en el <iframe> y se mostrará el estado "sin tráiler".
+  }
+
+  return url;
 }
