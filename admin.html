@@ -52,9 +52,12 @@
         <h1>Panel de administración</h1>
         <button class="btn btn-ghost btn-sm" id="admin-logout-btn" type="button" style="display:none;">Bloquear panel</button>
       </div>
-      <p>Busca animes reales en la <strong>AniList API</strong>, agrégalos al catálogo de FicticionalTV y carga sus capítulos con el embed de tu reproductor. Todo se guarda solo en este navegador (localStorage) — es un panel de demostración, sin backend real.</p>
+      <p>Busca animes reales en la <strong>AniList API</strong>, agrégalos al catálogo de FicticionalTV y carga sus capítulos con el embed de tu reproductor. Todo se guarda en Firebase (Firestore), así que los cambios se ven igual para todo el mundo, no solo en este navegador.</p>
       <p class="admin-hint">
-        ¿Editaste <code>js/data.js</code> y no ves los cambios? Cada navegador guarda su propia copia local del catálogo.
+        <span class="pill pill-warn" id="firebase-status-pill">Conectando con Firebase…</span>
+      </p>
+      <p class="admin-hint">
+        ¿Quieres borrar lo agregado y volver al catálogo semilla de <code>js/data.js</code>?
         <button class="btn btn-ghost btn-sm" id="reset-library-btn" type="button" style="margin-left:8px;">Restablecer datos de fábrica</button>
       </p>
     </div>
