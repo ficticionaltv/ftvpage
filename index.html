@@ -44,7 +44,7 @@
 
     <section class="section">
       <div class="section-head">
-        <h2>Últimos episodios</h2>
+        <h2>Destacados</h2>
         <a href="catalogo.html" class="see-all">Ver todo →</a>
       </div>
       <div class="rail" id="rail-recent"></div>
@@ -56,6 +56,14 @@
         <a href="catalogo.html" class="see-all">Ver todo →</a>
       </div>
       <div class="rail" id="rail-top"></div>
+    </section>
+
+    <section class="section" id="section-upcoming">
+      <div class="section-head">
+        <h2>Próximamente</h2>
+        <a href="catalogo.html" class="see-all">Ver todo →</a>
+      </div>
+      <div class="rail" id="rail-upcoming"></div>
     </section>
 
     <section class="cta-banner">
@@ -110,7 +118,7 @@
   function renderHomeRails() {
     const recent = ANIME_LIST.filter(a => a.recent);
     document.getElementById("rail-recent").innerHTML =
-      recent.map(a => safeRender(() => cardTemplate(a, { badge: "Nuevo" }), a)).join("");
+      recent.map(a => safeRender(() => cardTemplate(a, { badge: "Destacado" }), a)).join("");
 
     const top = [...ANIME_LIST].sort((a, b) => a.popularityRank - b.popularityRank).slice(0, 10);
     document.getElementById("rail-top").innerHTML =
@@ -120,6 +128,19 @@
           ${cardTemplate(a)}
         </div>
       `, a)).join("");
+
+    // Próximamente: animes que todavía no tienen ningún capítulo cargado.
+    const upcoming = ANIME_LIST.filter(a => !a.episodes || a.episodes.length === 0);
+    const upcomingSection = document.getElementById("section-upcoming");
+    if (upcoming.length) {
+      upcomingSection.style.display = "";
+      document.getElementById("rail-upcoming").innerHTML =
+        upcoming.map(a => safeRender(() => cardTemplate(a, { badge: "Próximamente" }), a)).join("");
+    } else {
+      // Sin animes pendientes de estrenar: ocultamos la sección en vez de
+      // dejar un riel vacío en medio de la página.
+      upcomingSection.style.display = "none";
+    }
   }
 
   // Si un anime tiene algún dato inesperado que rompa su tarjeta, lo
