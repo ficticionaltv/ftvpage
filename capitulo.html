@@ -32,46 +32,75 @@
   </nav>
 </header>
 
-<main class="container">
-  <div class="chapter-breadcrumb">
-    <a href="catalogo.html">Catálogo</a>
-    <span>/</span>
-    <a id="chapter-anime-link" href="#"></a>
-    <span>/</span>
-    <span>Episodio</span>
+<main class="container chapter-page" id="chapter-root">
+  <div class="chapter-player">
+    <div class="chapter-player-frame" id="player-wrap"></div>
   </div>
 
-  <h1 class="chapter-title" id="chapter-title"></h1>
+  <div class="chapter-layout" id="chapter-body">
+    <div class="chapter-info">
+      <div class="chapter-info-top">
+        <a class="chapter-kicker" id="chapter-kicker" href="#"></a>
+        <button class="chapter-save-btn" id="chapter-save-btn" type="button" aria-pressed="false"></button>
+      </div>
 
-  <div id="chapter-body">
-    <div class="chapter-player">
-      <div class="chapter-player-frame" id="player-wrap"></div>
+      <h1 class="chapter-title" id="chapter-title"></h1>
+
+      <div class="chapter-meta" id="chapter-meta">
+        <span class="chapter-chip" id="chapter-duration-chip"></span>
+        <span class="chapter-meta-sep">•</span>
+        <span id="chapter-audio-text"></span>
+        <span class="chapter-meta-sep">•</span>
+        <span id="chapter-position-text"></span>
+      </div>
+
+      <div class="chapter-engagement">
+        <div class="chapter-votes" role="group" aria-label="Valorar este episodio">
+          <button class="vote-btn is-like" id="btn-like" type="button" aria-pressed="false">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 18V9M2 10.5V16a1.5 1.5 0 0 0 1.5 1.5H15a2 2 0 0 0 2-1.7l.9-6A2 2 0 0 0 15.9 7.5H12V3.8a1.8 1.8 0 0 0-1.8-1.8L7 8.5"/></svg>
+            <span id="like-count">0</span>
+          </button>
+          <button class="vote-btn is-dislike" id="btn-dislike" type="button" aria-pressed="false">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2v9M18 9.5V4a1.5 1.5 0 0 0-1.5-1.5H5a2 2 0 0 0-2 1.7l-.9 6A2 2 0 0 0 4.1 12.5H8v3.7a1.8 1.8 0 0 0 1.8 1.8L13 11.5"/></svg>
+            <span id="dislike-count">0</span>
+          </button>
+        </div>
+        <button class="chapter-share-btn" id="chapter-share-btn" type="button" title="Compartir episodio" aria-label="Compartir episodio">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="15.5" cy="4.5" r="2.3"/><circle cx="4.5" cy="10" r="2.3"/><circle cx="15.5" cy="15.5" r="2.3"/><path d="M6.6 8.9l6.8-3.3M6.6 11.1l6.8 3.3"/></svg>
+        </button>
+      </div>
+
+      <div class="chapter-description">
+        <p class="chapter-description-text" id="chapter-description"></p>
+        <button class="chapter-desc-toggle" id="chapter-desc-toggle" type="button">Ver más</button>
+      </div>
     </div>
 
-    <nav class="chapter-nav-bar" aria-label="Navegación de episodios">
-      <a class="chapter-nav-btn" id="nav-prev" href="#">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M10.5 2.5L4.5 8l6 5.5"/></svg>
-        Anterior
-      </a>
-      <div class="chapter-position">
-        <span id="chapter-position"></span>
+    <aside class="chapter-sidebar">
+      <div class="chapter-side-group" id="side-next-group">
+        <span class="chapter-side-label">Siguiente episodio</span>
+        <div id="side-next"></div>
       </div>
-      <a class="chapter-nav-btn" id="nav-next" href="#">
-        Siguiente
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 2.5l6 5.5-6 5.5"/></svg>
-      </a>
-    </nav>
+      <div class="chapter-side-group" id="side-prev-group">
+        <span class="chapter-side-label">Episodio anterior</span>
+        <div id="side-prev"></div>
+      </div>
+      <button class="chapter-more-btn" id="chapter-more-btn" type="button">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="2.4" rx="1"/><rect x="2" y="6.8" width="12" height="2.4" rx="1"/><rect x="2" y="10.6" width="7" height="2.4" rx="1"/></svg>
+        Ver más episodios
+      </button>
+    </aside>
+  </div>
 
-    <div class="chapter-back-row">
-      <a class="btn btn-ghost btn-sm" id="chapter-back-link" href="catalogo.html">← Volver a la ficha del anime</a>
+  <section class="section" id="all-episodes-section" style="padding-top:0;">
+    <div class="section-head">
+      <h2>Todos los episodios</h2>
     </div>
+    <div class="episodes-grid" id="chapter-episodes-rail"></div>
+  </section>
 
-    <section class="section" style="padding-top:0;">
-      <div class="section-head">
-        <h2>Todos los episodios</h2>
-      </div>
-      <div class="episodes-grid" id="chapter-episodes-rail"></div>
-    </section>
+  <div class="chapter-back-row">
+    <a class="btn btn-ghost btn-sm" id="chapter-back-link" href="catalogo.html">← Volver a la ficha del anime</a>
   </div>
 </main>
 
