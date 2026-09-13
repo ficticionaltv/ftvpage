@@ -298,6 +298,18 @@ function updateAnimeInfo(animeId, { audio, cast } = {}) {
   return anime;
 }
 
+/* Actualiza la imagen de fondo/banner del anime (la que se ve en el
+   slider de inicio y arriba de su ficha). Se usa desde el panel para
+   reemplazar la que trajo AniList si no convence. Un campo vacío
+   vuelve a la imagen de relleno automática, nunca la deja en blanco. */
+function updateAnimeBanner(animeId, newBannerUrl) {
+  const anime = getAnimeById(animeId);
+  if (!anime) return null;
+  anime.banner = newBannerUrl && newBannerUrl.trim() ? newBannerUrl.trim() : (anime.cover || bannerUrl(animeId));
+  persist();
+  return anime;
+}
+
 /* Actualiza el logo/isotipo del anime (imagen que reemplaza al título de
    texto en el slider y en la ficha). Se guarda como una URL de imagen
    (subida a Firebase Storage desde el panel, o pegada a mano). */

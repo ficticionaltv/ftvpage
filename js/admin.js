@@ -489,6 +489,20 @@ function renderAnimeDetail() {
       </div>
     </div>
 
+    <h4 class="admin-subhead">Imagen de fondo</h4>
+    <p class="admin-hint">Esta es la imagen ancha que se usa como fondo en el slider de inicio y arriba de la ficha del anime. Trae la que encontró AniList por defecto, pero puedes pegar otro link si no te convence.</p>
+    <form class="admin-episode-form" id="banner-form">
+      <label>URL de la imagen de fondo
+        <input class="input" type="url" id="banner-url-input" value="${escapeAttr(anime.banner || "")}" placeholder="https://ejemplo.com/fondos/mi-anime.jpg">
+      </label>
+      <div class="admin-episode-thumb-preview">
+        <img id="banner-url-preview" src="${escapeAttr(anime.banner || "")}" alt="" ${anime.banner ? "" : 'style="display:none"'}>
+      </div>
+      <div class="admin-anime-actions">
+        <button class="btn btn-primary btn-sm" type="submit">Guardar imagen de fondo</button>
+      </div>
+    </form>
+
     <h4 class="admin-subhead">Logo del anime</h4>
     <p class="admin-hint">Pega el link directo a una imagen del logo/isotipo (fondo transparente, PNG recomendado — por ejemplo, subida a imgur, tu propio hosting, etc). Si lo agregas, reemplaza el título de texto en el slider del inicio y en la ficha del anime.</p>
     <form class="admin-episode-form" id="logo-form">
@@ -607,6 +621,17 @@ function renderAnimeDetail() {
   }
 
   document.querySelector("#delete-anime-btn").addEventListener("click", () => handleDeleteAnime(anime.id));
+
+  const bannerForm = document.querySelector("#banner-form");
+  if (bannerForm) {
+    bannerForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const url = document.querySelector("#banner-url-input").value.trim();
+      updateAnimeBanner(anime.id, url);
+      renderAnimeDetail();
+    });
+  }
+  wireImagePreview("banner-url-input", "banner-url-preview");
 
   const logoForm = document.querySelector("#logo-form");
   if (logoForm) {
