@@ -277,6 +277,12 @@ button { font-family: inherit; }
 .hero-slide-bg::after {
   content: "";
   position: absolute; inset: 0;
+  background: linear-gradient(180deg,
+    rgba(18,18,22,0) 0%,
+    rgba(18,18,22,0) 48%,
+    rgba(18,18,22,.5) 62%,
+    rgba(18,18,22,.85) 80%,
+    rgba(18,18,22,.95) 100%);
 }
 
 @media (max-width: 640px) {
