@@ -664,20 +664,24 @@ button { font-family: inherit; }
   background: var(--surface);
   border: 1px solid var(--surface-border);
   border-radius: var(--radius);
-  padding: 18px 20px;
+  padding: 20px 24px;
   margin-top: 18px;
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 8px 40px;
 }
+.synopsis-main { min-width: 0; }
 
 /* Sección editable de información (audio, reparto, género, estudio) que
-   se muestra debajo de la sinopsis, dentro del mismo recuadro. Los
+   se muestra a la derecha de la sinopsis, dentro del mismo recuadro. Los
    valores se completan desde el panel de administración. */
 .detail-info-list {
-  margin: 16px 0 0;
-  padding-top: 14px;
-  border-top: 1px solid var(--surface-border);
+  margin: 0;
+  padding-left: 24px;
+  border-left: 1px solid var(--surface-border);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 .detail-info-row {
   display: flex;
@@ -736,6 +740,13 @@ button { font-family: inherit; }
   .detail-main { text-align: center; }
   .detail-main .hero-genres { justify-content: center; }
   .detail-main .detail-meta { justify-content: center; }
+  .synopsis-card { grid-template-columns: 1fr; }
+  .detail-info-list {
+    padding-left: 0;
+    padding-top: 14px;
+    border-left: none;
+    border-top: 1px solid var(--surface-border);
+  }
 }
 
 @media (max-width: 560px) {
