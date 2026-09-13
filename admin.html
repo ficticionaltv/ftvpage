@@ -72,13 +72,8 @@
         <h1>Panel de administración</h1>
         <button class="btn btn-ghost btn-sm" id="admin-logout-btn" type="button" style="display:none;">Bloquear panel</button>
       </div>
-      <p>Busca animes reales en la <strong>AniList API</strong>, agrégalos al catálogo de FicticionalTV y carga sus capítulos con el embed de tu reproductor. Todo se guarda en Firebase (Firestore), así que los cambios se ven igual para todo el mundo, no solo en este navegador.</p>
       <p class="admin-hint">
         <span class="pill pill-warn" id="firebase-status-pill">Conectando con Firebase…</span>
-      </p>
-      <p class="admin-hint">
-        ¿Quieres borrar lo agregado y volver al catálogo semilla de <code>js/data.js</code>?
-        <button class="btn btn-ghost btn-sm" id="reset-library-btn" type="button" style="margin-left:8px;">Restablecer datos de fábrica</button>
       </p>
     </div>
 
@@ -99,6 +94,7 @@
       </form>
       <p class="admin-hint" id="anilist-status"></p>
       <div class="anilist-results" id="anilist-results"></div>
+      <div id="anilist-edit-container"></div>
     </section>
 
     <section class="admin-section">
@@ -148,6 +144,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js"></script>
 <script src="js/firebase-config.js"></script>
 <script src="js/data.js"></script>
 <script src="js/store.js"></script>
