@@ -443,7 +443,8 @@ button { font-family: inherit; }
 .card-body h3 { font-size: .96rem; margin-bottom: 4px; line-height: 1.25; }
 .card-genres { font-size: .78rem; color: var(--text-faint); }
 
-.rank-card { display: flex; align-items: flex-end; gap: 12px; flex: 0 0 auto; }
+.rank-card { display: flex; align-items: flex-end; gap: 12px; flex: 0 0 auto; scroll-snap-align: start; }
+.rank-card .card { scroll-snap-align: none; }
 .rank-number {
   font-family: 'Rajdhani', sans-serif;
   font-weight: 700;
@@ -842,8 +843,8 @@ button { font-family: inherit; }
 /* ---------------------------------------------------------------------- */
 
 @media (max-width: 560px) {
-  .container { padding: 0 18px; }
-  .rail { margin: 0 -18px; padding-left: 18px; padding-right: 18px; }
+  .container { padding: 0 var(--pad); }
+  .rail { margin: 0 calc(-1 * var(--pad)); padding-left: var(--pad); padding-right: var(--pad); }
   .section { padding: 40px 0; }
 }
 
