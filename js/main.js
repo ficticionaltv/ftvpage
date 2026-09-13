@@ -163,11 +163,13 @@ function matchesSearchQuery(anime, rawQuery) {
    Utilidades compartidas
    ------------------------------------------------------------ */
 function starString(rating) {
-  // Cualquier rating fuera de 0-5 (negativo, NaN, mayor a 5, etc.) antes
+  // Las calificaciones van de 0 a 10 (así llegan desde AniList), pero el
+  // widget solo tiene 5 símbolos, así que cada estrella vale 2 puntos.
+  // Cualquier rating fuera de 0-10 (negativo, NaN, mayor a 10, etc.) antes
   // rompía "★".repeat(...) con un RangeError y cortaba toda la página.
   // Lo acotamos siempre a un rango válido antes de repetir el carácter.
   const safeRating = Number.isFinite(rating) ? rating : 0;
-  const full = Math.min(5, Math.max(0, Math.round(safeRating)));
+  const full = Math.min(5, Math.max(0, Math.round(safeRating / 2)));
   return "★".repeat(full) + "☆".repeat(5 - full);
 }
 

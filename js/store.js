@@ -62,6 +62,8 @@ function normalizeAnimeRecord(a) {
     cover: a.cover || coverUrl(id),
     banner: a.banner || a.cover || bannerUrl(id),
     trailerEmbedUrl: a.trailerEmbedUrl || null,
+    audio: a.audio || null,
+    cast: a.cast || null,
     episodes,
     episodesCount: episodes.length,
     source: a.source || "seed",
@@ -69,13 +71,18 @@ function normalizeAnimeRecord(a) {
   };
 }
 
-/* Acota cualquier rating a un número finito entre 0 y 5. Un rating
-   corrupto (negativo, mayor a 5, texto, etc. — venga de donde venga)
-   rompía starString() con un RangeError y tumbaba toda la página. */
+/* Acota cualquier rating a un número finito entre 0 y 10 (AniList
+   devuelve averageScore de 0 a 100, y anilist.js ya lo convierte a una
+   escala de 0 a 10 dividiendo entre 10 — por ejemplo 6.5). Antes esto se
+   acotaba a un máximo de 5, así que cualquier anime con 5.1 o más se
+   mostraba recortado a 5.0. Un rating corrupto (negativo, texto, etc.
+   venga de donde venga) rompía starString() con un RangeError y tumbaba
+   toda la página, así que lo seguimos acotando, solo que con el tope
+   correcto. */
 function normalizeRating(rating) {
   const n = Number(rating);
   if (!Number.isFinite(n)) return 0;
-  return Math.min(5, Math.max(0, n));
+  return Math.min(10, Math.max(0, n));
 }
 
 function normalizeEpisodeRecord(animeId, ep) {
@@ -241,7 +248,7 @@ function addAnimeToLibrary(anime) {
     title: anime.title,
     synopsis: anime.synopsis && anime.synopsis.trim() ? anime.synopsis.trim() : "Sinopsis no disponible todavía.",
     genres: anime.genres && anime.genres.length ? anime.genres : ["Sin categoría"],
-    rating: anime.rating || 0,
+    rating: normalizeRating(anime.rating),
     year: anime.year || new Date().getFullYear(),
     studio: anime.studio || "Estudio desconocido",
     popularityRank: nextPopularityRank(),
@@ -249,6 +256,8 @@ function addAnimeToLibrary(anime) {
     cover: anime.cover || coverUrl(id),
     banner: anime.banner || anime.cover || bannerUrl(id),
     trailerEmbedUrl: anime.trailerEmbedUrl || null,
+    audio: anime.audio || null,
+    cast: anime.cast || null,
     episodes: [],
     source: "anilist",
     anilistId: anime.anilistId != null ? anime.anilistId : null
@@ -271,6 +280,18 @@ function updateAnimeTrailer(animeId, trailerEmbedUrl) {
   const anime = getAnimeById(animeId);
   if (!anime) return null;
   anime.trailerEmbedUrl = trailerEmbedUrl && trailerEmbedUrl.trim() ? trailerEmbedUrl.trim() : null;
+  persist();
+  return anime;
+}
+
+/* Actualiza la sección editable de información (audio y reparto) que se
+   muestra en la ficha, debajo de la sinopsis. Género y estudio se toman
+   directamente de los campos que ya existen (genres/studio). */
+function updateAnimeInfo(animeId, { audio, cast } = {}) {
+  const anime = getAnimeById(animeId);
+  if (!anime) return null;
+  anime.audio = audio && audio.trim() ? audio.trim() : null;
+  anime.cast = cast && cast.trim() ? cast.trim() : null;
   persist();
   return anime;
 }

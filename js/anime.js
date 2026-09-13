@@ -13,7 +13,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const anime = getAnimeById(id) || ANIME_LIST[0];
     renderDetail(anime);
     renderTrailer(anime);
-    renderWatchCta(anime);
     renderEpisodes(anime);
   }
 
@@ -49,6 +48,23 @@ function renderDetail(anime) {
     <span class="sep">|</span>
     <span>${anime.episodes.length} episodio${anime.episodes.length === 1 ? "" : "s"}</span>
   `;
+
+  renderExtraInfo(anime);
+}
+
+/* Sección editable (desde el panel de administración) con audio, reparto,
+   género y estudio. Si un campo no se ha completado todavía, mostramos un
+   guion en vez de dejar la fila vacía o con "undefined". */
+function renderExtraInfo(anime) {
+  const audioEl = document.querySelector("#info-audio");
+  const castEl = document.querySelector("#info-cast");
+  const genreEl = document.querySelector("#info-genre");
+  const studioEl = document.querySelector("#info-studio");
+
+  if (audioEl) audioEl.textContent = anime.audio && anime.audio.trim() ? anime.audio.trim() : "—";
+  if (castEl) castEl.textContent = anime.cast && anime.cast.trim() ? anime.cast.trim() : "—";
+  if (genreEl) genreEl.textContent = (anime.genres || []).length ? anime.genres.join(", ") : "—";
+  if (studioEl) studioEl.textContent = anime.studio && anime.studio.trim() ? anime.studio.trim() : "—";
 }
 
 function renderTrailer(anime) {
@@ -100,28 +116,6 @@ document.addEventListener("DOMContentLoaded", () => {
     toggle.textContent = expanded ? "Ver menos" : "Más detalles";
   });
 });
-
-/* El botón "Ver ahora" lleva directo al reproductor real (capitulo.html)
-   del primer episodio disponible. Si todavía no hay episodios cargados,
-   el botón se deshabilita en vez de fingir que hay algo que ver. */
-function renderWatchCta(anime) {
-  const episodes = [...anime.episodes].sort((a, b) => a.number - b.number);
-  const first = episodes[0];
-  const ctaWatch = document.querySelector("#cta-watch");
-  const ctaLabel = document.querySelector("#cta-watch-label");
-  if (!ctaWatch) return;
-
-  if (!first) {
-    ctaWatch.removeAttribute("href");
-    ctaWatch.classList.add("is-disabled");
-    if (ctaLabel) ctaLabel.textContent = "Aún sin capítulos";
-    return;
-  }
-
-  ctaWatch.href = `capitulo.html?id=${anime.id}&ep=${first.number}`;
-  ctaWatch.classList.remove("is-disabled");
-  if (ctaLabel) ctaLabel.textContent = "Ver ahora";
-}
 
 function renderEpisodes(anime) {
   const grid = document.querySelector("#episodes-grid");

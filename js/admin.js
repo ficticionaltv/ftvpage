@@ -315,6 +315,20 @@ function renderAnimeDetail() {
       </div>
     </form>
 
+    <h4 class="admin-subhead">Información de la ficha</h4>
+    <form class="admin-episode-form" id="info-form">
+      <label>Audio
+        <input class="input" type="text" id="info-audio-input" value="${escapeAttr(anime.audio || "")}" placeholder="Ej. Español Latino, Japonés (Subtitulado)">
+      </label>
+      <label>Reparto
+        <input class="input" type="text" id="info-cast-input" value="${escapeAttr(anime.cast || "")}" placeholder="Ej. Nombre del actor de voz (Personaje)">
+      </label>
+      <p class="admin-hint">Estos campos aparecen en la ficha del anime, debajo de la sinopsis. El género y el estudio se toman automáticamente de los datos de arriba.</p>
+      <div class="admin-anime-actions">
+        <button class="btn btn-primary btn-sm" type="submit">Guardar información</button>
+      </div>
+    </form>
+
     <h4 class="admin-subhead">${editing ? `Editando episodio ${editing.number}` : "Agregar capítulo"}</h4>
     <form class="admin-episode-form" id="episode-form">
       <div class="form-row">
@@ -366,6 +380,7 @@ function renderAnimeDetail() {
 
   document.querySelector("#episode-form").addEventListener("submit", handleEpisodeSubmit);
   document.querySelector("#trailer-form").addEventListener("submit", handleTrailerSubmit);
+  document.querySelector("#info-form").addEventListener("submit", handleInfoSubmit);
 
   const thumbInput = document.querySelector("#ep-thumb");
   const thumbPreview = document.querySelector("#ep-thumb-preview");
@@ -443,6 +458,18 @@ function handleTrailerSubmit(e) {
   const embedUrl = normalizeTrailerUrl(rawUrl);
 
   updateAnimeTrailer(anime.id, embedUrl);
+  renderAnimeDetail();
+}
+
+function handleInfoSubmit(e) {
+  e.preventDefault();
+  const anime = getAnimeById(selectedAnimeId);
+  if (!anime) return;
+
+  const audio = document.querySelector("#info-audio-input").value.trim();
+  const cast = document.querySelector("#info-cast-input").value.trim();
+
+  updateAnimeInfo(anime.id, { audio, cast });
   renderAnimeDetail();
 }
 
