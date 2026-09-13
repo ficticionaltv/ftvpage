@@ -66,7 +66,6 @@ function renderPlayer(anime, episode) {
     wrap.innerHTML = `
       <div class="no-embed-msg">
         <p>Este episodio todavía no tiene un reproductor configurado.</p>
-        <a class="btn btn-ghost btn-sm" href="admin.html?id=${anime.id}">Agregar embed en el panel de administración</a>
       </div>
     `;
   }
@@ -102,16 +101,6 @@ function renderNavBar(anime, episodes, episode) {
 
   document.querySelector("#chapter-position").textContent =
     `Episodio ${episode.number} de ${episodes.length}`;
-
-  const jump = document.querySelector("#chapter-jump");
-  jump.innerHTML = episodes.map(e => `
-    <option value="${e.number}" ${e.number === episode.number ? "selected" : ""}>
-      Episodio ${e.number} — ${e.title}
-    </option>
-  `).join("");
-  jump.onchange = () => {
-    window.location.href = `capitulo.html?id=${anime.id}&ep=${jump.value}`;
-  };
 }
 
 function renderEpisodesRail(anime, episodes, episode) {
