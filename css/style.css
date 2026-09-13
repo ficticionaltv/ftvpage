@@ -636,10 +636,16 @@ button { font-family: inherit; }
   margin-top: -140px;
   display: grid;
   grid-template-columns: 220px 1fr;
+  grid-template-areas:
+    "poster main"
+    "poster synopsis";
+  align-content: start;
   gap: 32px;
   padding-bottom: 40px;
 }
-.detail-poster-col { min-width: 0; }
+.detail-poster-col { grid-area: poster; min-width: 0; }
+.detail-main { grid-area: main; }
+.detail-info .synopsis-card { grid-area: synopsis; }
 .detail-poster {
   display: block;
   width: 100%;
@@ -720,8 +726,16 @@ button { font-family: inherit; }
 .synopsis-toggle:hover { color: var(--primary-hover); }
 
 @media (max-width: 720px) {
-  .detail-info { grid-template-columns: 1fr; margin-top: -70px; gap: 20px; }
+  .detail-info {
+    grid-template-columns: 1fr;
+    grid-template-areas: "poster" "main" "synopsis";
+    margin-top: -70px;
+    gap: 20px;
+  }
   .detail-poster-col { max-width: 220px; margin: 0 auto; }
+  .detail-main { text-align: center; }
+  .detail-main .hero-genres { justify-content: center; }
+  .detail-main .detail-meta { justify-content: center; }
 }
 
 @media (max-width: 560px) {
