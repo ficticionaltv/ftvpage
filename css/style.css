@@ -277,9 +277,7 @@ button { font-family: inherit; }
 .hero-slide-bg::after {
   content: "";
   position: absolute; inset: 0;
-  background:
-    linear-gradient(90deg, rgba(18,18,22,.82) 0%, rgba(18,18,22,.4) 45%, rgba(18,18,22,.05) 75%),
-    linear-gradient(180deg, rgba(18,18,22,0) 0%, rgba(18,18,22,.5) 60%, rgba(18,18,22,.78) 100%);
+  background: linear-gradient(180deg, rgba(18,18,22,0) 60%, rgba(18,18,22,.7) 100%);
 }
 
 .hero-content {
@@ -312,7 +310,7 @@ button { font-family: inherit; }
   background: rgba(26,26,34,.7);
 }
 
-.hero-title { max-width: 16ch; }
+.hero-title { max-width: 16ch; text-shadow: 0 2px 10px rgba(0,0,0,.6); }
 
 .hero-rating {
   display: flex;
@@ -329,6 +327,7 @@ button { font-family: inherit; }
 .hero-synopsis {
   max-width: 46ch;
   color: #C7C7D1;
+  text-shadow: 0 1px 6px rgba(0,0,0,.7);
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
