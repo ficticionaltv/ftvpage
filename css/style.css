@@ -326,7 +326,26 @@ button { font-family: inherit; }
 }
 .hero-rating .stars { letter-spacing: 2px; }
 
-.hero-synopsis { max-width: 46ch; color: #C7C7D1; }
+.hero-synopsis {
+  max-width: 46ch;
+  color: #C7C7D1;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hero-logo {
+  display: block;
+  max-width: min(420px, 60vw);
+  max-height: 140px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: left bottom;
+  margin: 4px 0 6px;
+  filter: drop-shadow(0 4px 14px rgba(0,0,0,.5));
+}
 
 .hero-actions { display: flex; gap: 14px; margin-top: 8px; flex-wrap: wrap; }
 
@@ -584,18 +603,19 @@ button { font-family: inherit; }
   overflow: hidden;
   cursor: pointer;
   background: var(--surface);
+  color: #fff; /* los <button> no heredan el color de texto del body por defecto */
   transition: border-color .18s var(--ease), transform .18s var(--ease);
 }
 .genre-card::before {
   content: "";
   position: absolute; inset: 0;
-  background: linear-gradient(135deg, rgba(255,17,17,.5), rgba(255,222,0,.28));
-  opacity: .55;
-  mix-blend-mode: screen;
+  background:
+    linear-gradient(0deg, rgba(0,0,0,.6) 0%, rgba(0,0,0,.05) 60%),
+    linear-gradient(135deg, rgba(255,17,17,.55), rgba(255,222,0,.3));
   transition: opacity .18s var(--ease);
 }
 .genre-card:hover { border-color: var(--highlight); transform: translateY(-3px); }
-.genre-card:hover::before { opacity: .8; }
+.genre-card:hover::before { opacity: .85; }
 .genre-card span {
   position: relative;
   z-index: 1;
@@ -604,6 +624,8 @@ button { font-family: inherit; }
   font-family: 'Rajdhani', sans-serif;
   font-weight: 700;
   font-size: 1.25rem;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,.65);
 }
 .genre-card.is-active { border-color: var(--primary); }
 .genre-card.is-active::after {
@@ -1056,7 +1078,31 @@ button { font-family: inherit; }
 }
 
 /* ---------------------------------------------------------------------- */
-/* Autenticación del panel de administración                              */
+/* Logo del anime (panel de administración)                               */
+/* ---------------------------------------------------------------------- */
+.admin-logo-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.admin-logo-preview {
+  width: 220px;
+  height: 90px;
+  border: 1px dashed var(--surface-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  flex-shrink: 0;
+}
+.admin-logo-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.admin-logo-controls { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.admin-logo-upload-btn { cursor: pointer; }
+
 /* ---------------------------------------------------------------------- */
 .admin-header-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 
