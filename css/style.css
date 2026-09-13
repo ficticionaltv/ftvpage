@@ -23,7 +23,7 @@
   --radius: 6px;
   --radius-sm: 3px;
   --gap: 24px;
-  --maxw: 1320px;
+  --maxw: 1920px;
 
   --ease: cubic-bezier(.4, 0, .2, 1);
 }
@@ -69,7 +69,7 @@ button { font-family: inherit; }
 .container {
   max-width: var(--maxw);
   margin: 0 auto;
-  padding: 0 32px;
+  padding: 0 clamp(24px, 3.5vw, 64px);
 }
 
 .visually-hidden {
@@ -288,7 +288,7 @@ button { font-family: inherit; }
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 0 32px 64px;
+  padding: 0 clamp(24px, 3.5vw, 64px) 64px;
   max-width: var(--maxw);
   margin: 0 auto;
 }
