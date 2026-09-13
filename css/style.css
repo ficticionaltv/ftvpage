@@ -1083,9 +1083,30 @@ button { font-family: inherit; }
   color: var(--text-muted);
   margin: 18px 0 20px;
 }
-.admin-auth-card .input { margin-top: 8px; text-align: center; letter-spacing: .3em; font-size: 1.1rem; }
+.admin-auth-card .input { margin-top: 8px; text-align: left; font-size: 1rem; }
 .admin-auth-card .btn { width: 100%; }
 .admin-auth-error { color: #FF6B6B; font-size: .82rem; min-height: 1.2em; margin: -8px 0 4px; }
+.admin-auth-divider { display: flex; align-items: center; gap: 12px; margin: 18px 0; color: var(--text-muted); font-size: .8rem; }
+.admin-auth-divider::before, .admin-auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--surface-border); }
+.btn-google {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #fff;
+  color: #1f1f1f;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius-sm, 8px);
+  padding: 10px 16px;
+  font-weight: 600;
+  font-size: .92rem;
+  cursor: pointer;
+  transition: box-shadow .15s ease, transform .15s ease;
+}
+.btn-google:hover { box-shadow: 0 2px 10px rgba(0,0,0,.18); }
+.btn-google:disabled { opacity: .6; cursor: not-allowed; }
+.admin-auth-hint { margin-top: 18px; font-size: .78rem; color: var(--text-muted); }
 
 /* ---------------------------------------------------------------------- */
 /* Tráiler en la ficha de anime                                           */
