@@ -409,19 +409,24 @@ function openAddEditor(item) {
   container.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-/* Conecta un input de URL de imagen con su <img> de vista previa. */
-function wireImagePreview(inputId, previewId) {
+/* Conecta un input de URL de imagen con su <img> de vista previa.
+   emptyHintId (opcional) es un elemento que se muestra cuando el campo
+   está vacío (por ejemplo, el aviso "sin logo" en la sección de logo). */
+function wireImagePreview(inputId, previewId, emptyHintId) {
   const input = document.querySelector(`#${inputId}`);
   const preview = document.querySelector(`#${previewId}`);
+  const emptyHint = emptyHintId ? document.querySelector(`#${emptyHintId}`) : null;
   if (!input || !preview) return;
   input.addEventListener("input", () => {
     const url = input.value.trim();
     if (url) {
       preview.src = url;
       preview.style.display = "";
+      if (emptyHint) emptyHint.style.display = "none";
     } else {
       preview.removeAttribute("src");
       preview.style.display = "none";
+      if (emptyHint) emptyHint.style.display = "";
     }
   });
 }
@@ -485,20 +490,20 @@ function renderAnimeDetail() {
     </div>
 
     <h4 class="admin-subhead">Logo del anime</h4>
-    <p class="admin-hint">Sube una imagen del logo/isotipo (fondo transparente, formato PNG recomendado). Si la subes, reemplaza el título de texto en el slider del inicio y en la ficha del anime.</p>
-    <div class="admin-logo-row">
+    <p class="admin-hint">Pega el link directo a una imagen del logo/isotipo (fondo transparente, PNG recomendado — por ejemplo, subida a imgur, tu propio hosting, etc). Si lo agregas, reemplaza el título de texto en el slider del inicio y en la ficha del anime.</p>
+    <form class="admin-episode-form" id="logo-form">
+      <label>URL de la imagen del logo
+        <input class="input" type="url" id="logo-url-input" value="${escapeAttr(anime.logo || "")}" placeholder="https://ejemplo.com/logos/mi-anime.png">
+      </label>
       <div class="admin-logo-preview">
-        ${anime.logo ? `<img src="${escapeAttr(anime.logo)}" alt="Logo de ${escapeAttr(anime.title)}">` : `<span class="admin-empty">Sin logo — se muestra el título de texto</span>`}
+        <img id="logo-url-preview" src="${escapeAttr(anime.logo || "")}" alt="" ${anime.logo ? "" : 'style="display:none"'}>
+        <span class="admin-empty" id="logo-empty-hint" ${anime.logo ? 'style="display:none"' : ""}>Sin logo — se muestra el título de texto</span>
       </div>
-      <div class="admin-logo-controls">
-        <label class="btn btn-ghost btn-sm admin-logo-upload-btn">
-          Subir imagen…
-          <input type="file" id="logo-file-input" accept="image/*" hidden>
-        </label>
+      <div class="admin-anime-actions">
+        <button class="btn btn-primary btn-sm" type="submit">Guardar logo</button>
         ${anime.logo ? `<button class="btn btn-ghost btn-sm" type="button" id="remove-logo-btn">Quitar logo</button>` : ""}
-        <p class="admin-hint" id="logo-upload-status"></p>
       </div>
-    </div>
+    </form>
 
     <h4 class="admin-subhead">Tráiler</h4>
     <form class="admin-episode-form" id="trailer-form">
@@ -603,10 +608,16 @@ function renderAnimeDetail() {
 
   document.querySelector("#delete-anime-btn").addEventListener("click", () => handleDeleteAnime(anime.id));
 
-  const logoInput = document.querySelector("#logo-file-input");
-  if (logoInput) {
-    logoInput.addEventListener("change", () => handleLogoUpload(anime.id, logoInput));
+  const logoForm = document.querySelector("#logo-form");
+  if (logoForm) {
+    logoForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const url = document.querySelector("#logo-url-input").value.trim();
+      updateAnimeLogo(anime.id, url);
+      renderAnimeDetail();
+    });
   }
+  wireImagePreview("logo-url-input", "logo-url-preview", "logo-empty-hint");
   const removeLogoBtn = document.querySelector("#remove-logo-btn");
   if (removeLogoBtn) {
     removeLogoBtn.addEventListener("click", () => {
@@ -680,46 +691,6 @@ function handleInfoSubmit(e) {
 
   updateAnimeInfo(anime.id, { audio, cast });
   renderAnimeDetail();
-}
-
-/* Sube el archivo elegido a Firebase Storage (carpeta "logos/") y guarda
-   la URL de descarga resultante como el logo del anime. Requiere que
-   Storage esté habilitado en la consola de Firebase — ver la nota al
-   final de este archivo si el botón se queda pegado en "Subiendo…". */
-async function handleLogoUpload(animeId, fileInput) {
-  const file = fileInput.files && fileInput.files[0];
-  const status = document.querySelector("#logo-upload-status");
-  if (!file) return;
-
-  if (!file.type.startsWith("image/")) {
-    if (status) status.textContent = "Elige un archivo de imagen (PNG, JPG, WEBP…).";
-    fileInput.value = "";
-    return;
-  }
-  if (file.size > 5 * 1024 * 1024) {
-    if (status) status.textContent = "La imagen pesa más de 5 MB. Usa una más liviana.";
-    fileInput.value = "";
-    return;
-  }
-
-  if (status) status.textContent = "Subiendo…";
-
-  try {
-    const ext = (file.name.split(".").pop() || "png").toLowerCase();
-    const path = `logos/${animeId}-${Date.now()}.${ext}`;
-    const ref = storage.ref().child(path);
-    await ref.put(file);
-    const url = await ref.getDownloadURL();
-    updateAnimeLogo(animeId, url);
-    renderAnimeDetail();
-  } catch (err) {
-    console.error(err);
-    if (status) {
-      status.textContent = (err && err.code === "storage/unauthorized")
-        ? "Firebase Storage rechazó la subida (revisa sus Reglas de seguridad — ver nota al final de admin.js)."
-        : "No se pudo subir la imagen. Intenta de nuevo.";
-    }
-  }
 }
 
 function handleDeleteAnime(id) {
@@ -810,33 +781,4 @@ function normalizeTrailerUrl(rawUrl) {
    Publica esas reglas después de crear el usuario correo/contraseña
    (o de iniciar sesión una vez con Google) en Firebase Authentication.
    Sin este paso, el candado de este archivo es solo cosmético.
-   ============================================================ */
-
-/* ============================================================
-   REGLAS DE FIREBASE STORAGE (para el logo del anime)
-   ------------------------------------------------------------
-   El botón "Subir imagen…" de la sección "Logo del anime" usa
-   Firebase Storage (ver handleLogoUpload arriba). Antes de que
-   funcione:
-
-   1. En la consola de Firebase → Storage, actívalo si no lo has
-      hecho (botón "Comenzar").
-   2. En la pestaña "Reglas" de Storage, usa algo como esto para que
-      cualquiera pueda VER los logos pero solo tu cuenta autorizada
-      pueda SUBIRLOS (ajusta el correo a los de ADMIN_EMAILS):
-
-   rules_version = '2';
-   service firebase.storage {
-     match /b/{bucket}/o {
-       match /logos/{fileName} {
-         allow read: if true;
-         allow write: if request.auth != null &&
-           request.auth.token.email in [
-             "tu-correo-admin@gmail.com"
-           ] &&
-           request.resource.size < 5 * 1024 * 1024 &&
-           request.resource.contentType.matches('image/.*');
-       }
-     }
-   }
    ============================================================ */

@@ -32,10 +32,3 @@ const db = firebase.firestore();
    Reglas de seguridad de Firestore en la consola de Firebase, no
    este archivo — ver la nota al final de js/admin.js. */
 const auth = firebase.auth();
-
-/* Instancia de Firebase Storage usada por js/admin.js para subir el
-   logo/isotipo de cada anime (imagen que reemplaza al título de texto).
-   Requiere que Storage esté habilitado en la consola de Firebase y que
-   sus Reglas permitan subir solo a usuarios autenticados (ver la nota
-   junto a updateAnimeLogo/handleLogoUpload en js/admin.js). */
-const storage = firebase.storage();
