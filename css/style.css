@@ -278,8 +278,8 @@ button { font-family: inherit; }
   content: "";
   position: absolute; inset: 0;
   background:
-    linear-gradient(90deg, rgba(18,18,22,.94) 0%, rgba(18,18,22,.55) 45%, rgba(18,18,22,.15) 75%),
-    var(--overlay);
+    linear-gradient(90deg, rgba(18,18,22,.82) 0%, rgba(18,18,22,.4) 45%, rgba(18,18,22,.05) 75%),
+    linear-gradient(180deg, rgba(18,18,22,0) 0%, rgba(18,18,22,.5) 60%, rgba(18,18,22,.78) 100%);
 }
 
 .hero-content {
@@ -764,6 +764,7 @@ button { font-family: inherit; }
   .detail-main { text-align: center; }
   .detail-main .hero-genres { justify-content: center; }
   .detail-main .detail-meta { justify-content: center; }
+  .detail-main .hero-logo { margin-left: auto; margin-right: auto; }
   .synopsis-card { grid-template-columns: 1fr; }
   .detail-info-list {
     padding-left: 0;
