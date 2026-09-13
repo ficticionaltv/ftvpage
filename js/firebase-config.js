@@ -25,3 +25,10 @@ firebase.initializeApp(firebaseConfig);
 
 /* Instancia de Firestore usada por js/store.js */
 const db = firebase.firestore();
+
+/* Instancia de Firebase Authentication usada por js/admin.js para
+   proteger el panel con correo/contraseña y Google. La protección
+   real (quién puede ESCRIBIR en Firestore) la deben imponer las
+   Reglas de seguridad de Firestore en la consola de Firebase, no
+   este archivo — ver la nota al final de js/admin.js. */
+const auth = firebase.auth();

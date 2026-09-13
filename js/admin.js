@@ -1,14 +1,29 @@
 /* ============================================================
    FicticionalTV — Panel de administración
-   - Protegido con un código de acceso simple (ver ADMIN_ACCESS_CODE).
-   - Busca animes en AniList API y los agrega a la biblioteca local.
+   - Protegido con Firebase Authentication (correo/contraseña y
+     Google). Solo las cuentas listadas en ADMIN_EMAILS pueden ver
+     el panel; esto es una comodidad de interfaz para dar un mensaje
+     claro cuanto antes, NO la protección real de los datos.
+   - La protección real vive en las Reglas de seguridad de Firestore
+     (consola de Firebase → Firestore Database → Reglas), que deben
+     exigir request.auth != null y el correo autorizado antes de
+     permitir escribir en la colección "ficticionaltv". Sin esas
+     reglas, cualquiera que conozca la configuración del proyecto
+     podría seguir escribiendo directamente contra la API de
+     Firestore, sin pasar por este formulario. Ver el bloque de
+     reglas de ejemplo al final de este archivo.
+   - Busca animes en AniList API y los agrega a la biblioteca.
    - Permite crear, editar y eliminar capítulos (con su embed).
-   Todo se guarda en localStorage (sin backend ni cuenta de usuario;
-   la autenticación es solo una barrera de acceso local, no seguridad real).
    ============================================================ */
 
-const ADMIN_ACCESS_CODE = "7891";
-const ADMIN_AUTH_KEY = "ficticionaltv_admin_auth";
+/* Lista de correos autorizados para entrar al panel. Edítala con
+   las cuentas de Google/Firebase que sí deben tener acceso.
+   IMPORTANTE: esta lista es solo para mostrar el mensaje de error
+   correcto en el navegador. Debes replicarla en las Reglas de
+   seguridad de Firestore para que sea una restricción real. */
+const ADMIN_EMAILS = [
+  // "tu-correo-admin@gmail.com",
+];
 
 let lastSearchResults = [];
 let selectedAnimeId = null;
@@ -40,50 +55,128 @@ document.addEventListener("DOMContentLoaded", () => {
   const gate = document.querySelector("#admin-auth-gate");
   const protectedRoot = document.querySelector("#admin-protected");
   const form = document.querySelector("#admin-auth-form");
-  const input = document.querySelector("#admin-auth-input");
+  const emailInput = document.querySelector("#admin-auth-email");
+  const passwordInput = document.querySelector("#admin-auth-password");
   const error = document.querySelector("#admin-auth-error");
+  const submitBtn = document.querySelector("#admin-auth-submit");
+  const googleBtn = document.querySelector("#admin-auth-google");
   const logoutBtn = document.querySelector("#admin-logout-btn");
 
-  function unlock() {
-    sessionStorage.setItem(ADMIN_AUTH_KEY, "1");
+  let panelInitialized = false;
+
+  function isAuthorized(user) {
+    if (!ADMIN_EMAILS.length) return true; // sin lista configurada: cualquier cuenta que inicie sesión pasa (protege igual el candado real, que son las Reglas de Firestore)
+    const email = (user.email || "").toLowerCase();
+    return ADMIN_EMAILS.some(e => e.toLowerCase() === email);
+  }
+
+  function showGate() {
+    if (gate) gate.style.display = "";
+    if (protectedRoot) protectedRoot.style.display = "none";
+    if (logoutBtn) logoutBtn.style.display = "none";
+    if (emailInput) setTimeout(() => emailInput.focus(), 50);
+  }
+
+  function showPanel() {
     if (gate) gate.style.display = "none";
     if (protectedRoot) protectedRoot.style.display = "";
     if (logoutBtn) logoutBtn.style.display = "";
-    // ANIME_LIST llega de forma asíncrona desde Firestore.
-    onLibraryReady(() => initAdminPanel());
+    if (!panelInitialized) {
+      panelInitialized = true;
+      // ANIME_LIST llega de forma asíncrona desde Firestore.
+      onLibraryReady(() => initAdminPanel());
+    }
   }
 
-  if (sessionStorage.getItem(ADMIN_AUTH_KEY) === "1") {
-    unlock();
-  } else if (gate) {
-    gate.style.display = "";
-    if (protectedRoot) protectedRoot.style.display = "none";
-    if (input) setTimeout(() => input.focus(), 50);
-  }
+  auth.onAuthStateChanged((user) => {
+    if (!user) {
+      panelInitialized = false;
+      showGate();
+      return;
+    }
+    if (!isAuthorized(user)) {
+      if (error) error.textContent = "Esta cuenta no tiene permisos de administrador.";
+      auth.signOut();
+      return;
+    }
+    if (error) error.textContent = "";
+    showPanel();
+  });
 
   if (form) {
-    form.addEventListener("submit", (e) => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const value = (input.value || "").trim();
-      if (value === ADMIN_ACCESS_CODE) {
-        if (error) error.textContent = "";
+      if (error) error.textContent = "";
+      const email = (emailInput.value || "").trim();
+      const password = passwordInput.value || "";
+      if (!email || !password) return;
+
+      submitBtn.disabled = true;
+      const originalLabel = submitBtn.textContent;
+      submitBtn.textContent = "Ingresando…";
+      try {
+        await auth.signInWithEmailAndPassword(email, password);
         form.reset();
-        unlock();
-      } else {
-        if (error) error.textContent = "Código incorrecto. Intenta de nuevo.";
-        input.value = "";
-        input.focus();
+      } catch (err) {
+        if (error) error.textContent = describeAuthError(err);
+        passwordInput.value = "";
+        passwordInput.focus();
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalLabel;
+      }
+    });
+  }
+
+  if (googleBtn) {
+    googleBtn.addEventListener("click", async () => {
+      if (error) error.textContent = "";
+      googleBtn.disabled = true;
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await auth.signInWithPopup(provider);
+      } catch (err) {
+        if (error) error.textContent = describeAuthError(err);
+      } finally {
+        googleBtn.disabled = false;
       }
     });
   }
 
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
-      sessionStorage.removeItem(ADMIN_AUTH_KEY);
-      window.location.reload();
+      auth.signOut();
     });
   }
 });
+
+function describeAuthError(err) {
+  const code = err && err.code;
+  switch (code) {
+    case "auth/invalid-email":
+      return "Ese correo no es válido.";
+    case "auth/user-disabled":
+      return "Esta cuenta fue deshabilitada.";
+    case "auth/user-not-found":
+    case "auth/wrong-password":
+    case "auth/invalid-credential":
+      return "Correo o contraseña incorrectos.";
+    case "auth/too-many-requests":
+      return "Demasiados intentos fallidos. Espera un momento e inténtalo de nuevo.";
+    case "auth/popup-closed-by-user":
+    case "auth/cancelled-popup-request":
+      return "Se cerró la ventana de Google antes de terminar el inicio de sesión.";
+    case "auth/popup-blocked":
+      return "El navegador bloqueó la ventana emergente de Google. Permite pop-ups para este sitio e inténtalo de nuevo.";
+    case "auth/network-request-failed":
+      return "Fallo de red. Revisa tu conexión e inténtalo de nuevo.";
+    case "auth/operation-not-allowed":
+      return "Este método de acceso no está habilitado en Firebase Authentication.";
+    default:
+      console.error(err);
+      return "No se pudo iniciar sesión. Intenta de nuevo.";
+  }
+}
 
 /* ------------------------------------------------------------
    Inicialización del panel (solo tras autenticarse)
@@ -529,3 +622,36 @@ function normalizeTrailerUrl(rawUrl) {
 
   return url;
 }
+
+/* ============================================================
+   REGLAS DE SEGURIDAD DE FIRESTORE (acción manual requerida)
+   ------------------------------------------------------------
+   Todo lo de arriba solo controla qué ve el NAVEGADOR. Firestore
+   sigue expuesto a través de su API pública con la firebaseConfig
+   de js/firebase-config.js (esos valores no son secretos, están
+   pensados para ser públicos), así que cualquiera podría seguir
+   escribiendo directo en la base de datos si las Reglas de
+   Firestore no lo impiden.
+
+   Para que la autenticación de arriba sea seguridad real y no solo
+   una pantalla de acceso, ve a la consola de Firebase → tu proyecto
+   → Firestore Database → pestaña "Reglas", y usa algo como esto
+   (ajusta la lista de correos a los mismos de ADMIN_EMAILS):
+
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /ficticionaltv/library {
+         allow read: if true;
+         allow write: if request.auth != null &&
+           request.auth.token.email in [
+             "tu-correo-admin@gmail.com"
+           ];
+       }
+     }
+   }
+
+   Publica esas reglas después de crear el usuario correo/contraseña
+   (o de iniciar sesión una vez con Google) en Firebase Authentication.
+   Sin este paso, el candado de este archivo es solo cosmético.
+   ============================================================ */
