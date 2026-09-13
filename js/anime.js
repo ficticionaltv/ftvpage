@@ -33,6 +33,19 @@ function renderDetail(anime) {
   document.querySelector("#detail-poster").src = anime.cover;
   document.querySelector("#detail-poster").alt = `Portada de ${anime.title}`;
   document.querySelector("#detail-title").textContent = anime.title;
+  const logoEl = document.querySelector("#detail-logo");
+  const titleEl = document.querySelector("#detail-title");
+  if (logoEl && titleEl) {
+    if (anime.logo) {
+      logoEl.src = anime.logo;
+      logoEl.alt = anime.title;
+      logoEl.style.display = "";
+      titleEl.style.display = "none";
+    } else {
+      logoEl.style.display = "none";
+      titleEl.style.display = "";
+    }
+  }
   document.querySelector("#detail-synopsis").textContent = anime.synopsis;
   updateSynopsisToggle();
 

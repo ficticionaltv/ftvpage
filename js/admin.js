@@ -191,21 +191,6 @@ function initAdminPanel() {
   if (pingBtn) pingBtn.addEventListener("click", checkAniListStatus);
   checkAniListStatus(); // comprobación automática al entrar al panel
 
-  const resetBtn = document.querySelector("#reset-library-btn");
-  if (resetBtn) {
-    resetBtn.addEventListener("click", () => {
-      if (!confirm("Esto borra todos los animes y capítulos agregados en este navegador y vuelve al catálogo original de data.js. ¿Continuar?")) return;
-      resetLibraryToSeed();
-      selectedAnimeId = null;
-      editingEpisodeNumber = null;
-      lastSearchResults = [];
-      document.querySelector("#anilist-results").innerHTML = "";
-      document.querySelector("#anilist-status").textContent = "";
-      renderAnimeList();
-      renderAnimeDetail();
-    });
-  }
-
   renderAnimeList();
   renderAnimeDetail();
 
@@ -328,14 +313,116 @@ function renderSearchResults() {
   resultsEl.querySelectorAll("[data-add]").forEach(btn => {
     btn.addEventListener("click", () => {
       const item = lastSearchResults[Number(btn.dataset.add)];
-      const record = addAnimeToLibrary(item);
-      selectedAnimeId = record.id;
-      editingEpisodeNumber = null;
-      renderAnimeList();
-      renderAnimeDetail();
-      renderSearchResults();
-      document.querySelector("#admin-anime-detail").scrollIntoView({ behavior: "smooth", block: "start" });
+      openAddEditor(item);
     });
+  });
+}
+
+/* ------------------------------------------------------------
+   Editor previo a guardar: muestra los datos que trajo AniList
+   pero permite corregirlos (título, sinopsis, portada, fondo,
+   año, calificación, estudio, géneros) antes de que queden
+   guardados en Firestore para todo el mundo.
+   ------------------------------------------------------------ */
+function openAddEditor(item) {
+  const container = document.querySelector("#anilist-edit-container");
+  if (!container) return;
+
+  container.innerHTML = `
+    <div class="admin-section anilist-edit-card">
+      <h3 class="admin-subhead">Revisa los datos antes de agregarlo</h3>
+      <p class="admin-hint">Esto es lo que devolvió AniList para "${escapeAttr(item.title)}". Corrige lo que haga falta (por ejemplo, si la sinopsis viene en inglés o el fondo no te convence) antes de guardarlo en la biblioteca.</p>
+      <form class="admin-episode-form" id="anilist-edit-form">
+        <label>Título
+          <input class="input" type="text" id="edit-title" value="${escapeAttr(item.title)}" required>
+        </label>
+        <label>Sinopsis
+          <textarea class="input" id="edit-synopsis" rows="4">${escapeAttr(item.synopsis || "")}</textarea>
+        </label>
+        <div class="form-row">
+          <label>Año
+            <input class="input" type="number" id="edit-year" value="${item.year || new Date().getFullYear()}">
+          </label>
+          <label>Calificación (0 a 10)
+            <input class="input" type="number" step="0.1" min="0" max="10" id="edit-rating" value="${item.rating || 0}">
+          </label>
+        </div>
+        <label>Estudio
+          <input class="input" type="text" id="edit-studio" value="${escapeAttr(item.studio || "")}">
+        </label>
+        <label>Géneros (separados por coma)
+          <input class="input" type="text" id="edit-genres" value="${escapeAttr((item.genres || []).join(", "))}">
+        </label>
+        <label>Portada — imagen vertical (URL)
+          <input class="input" type="url" id="edit-cover" value="${escapeAttr(item.cover || "")}">
+        </label>
+        <div class="admin-episode-thumb-preview">
+          <img id="edit-cover-preview" src="${escapeAttr(item.cover || "")}" alt="" ${item.cover ? "" : 'style="display:none"'}>
+        </div>
+        <label>Imagen de fondo / banner (URL)
+          <input class="input" type="url" id="edit-banner" value="${escapeAttr(item.banner || "")}">
+        </label>
+        <div class="admin-episode-thumb-preview">
+          <img id="edit-banner-preview" src="${escapeAttr(item.banner || "")}" alt="" ${item.banner ? "" : 'style="display:none"'}>
+        </div>
+        <p class="admin-hint">El logo del anime (para mostrar en vez del título) se sube después, ya guardado, desde su ficha en "Mi biblioteca".</p>
+        <div class="admin-anime-actions">
+          <button class="btn btn-primary btn-sm" type="submit">Guardar en biblioteca</button>
+          <button class="btn btn-ghost btn-sm" type="button" id="cancel-add-btn">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  wireImagePreview("edit-cover", "edit-cover-preview");
+  wireImagePreview("edit-banner", "edit-banner-preview");
+
+  document.querySelector("#cancel-add-btn").addEventListener("click", () => {
+    container.innerHTML = "";
+  });
+
+  document.querySelector("#anilist-edit-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    const edited = {
+      ...item,
+      title: document.querySelector("#edit-title").value.trim() || item.title,
+      synopsis: document.querySelector("#edit-synopsis").value.trim(),
+      year: Number(document.querySelector("#edit-year").value) || item.year,
+      rating: Number(document.querySelector("#edit-rating").value) || 0,
+      studio: document.querySelector("#edit-studio").value.trim() || item.studio,
+      genres: document.querySelector("#edit-genres").value.split(",").map(g => g.trim()).filter(Boolean),
+      cover: document.querySelector("#edit-cover").value.trim() || item.cover,
+      banner: document.querySelector("#edit-banner").value.trim() || item.banner
+    };
+
+    const record = addAnimeToLibrary(edited);
+    container.innerHTML = "";
+    selectedAnimeId = record.id;
+    editingEpisodeNumber = null;
+    renderAnimeList();
+    renderAnimeDetail();
+    renderSearchResults();
+    document.querySelector("#admin-anime-detail").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  container.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/* Conecta un input de URL de imagen con su <img> de vista previa. */
+function wireImagePreview(inputId, previewId) {
+  const input = document.querySelector(`#${inputId}`);
+  const preview = document.querySelector(`#${previewId}`);
+  if (!input || !preview) return;
+  input.addEventListener("input", () => {
+    const url = input.value.trim();
+    if (url) {
+      preview.src = url;
+      preview.style.display = "";
+    } else {
+      preview.removeAttribute("src");
+      preview.style.display = "none";
+    }
   });
 }
 
@@ -394,6 +481,22 @@ function renderAnimeDetail() {
           <a class="btn btn-ghost btn-sm" href="anime.html?id=${anime.id}" target="_blank" rel="noopener">Ver ficha</a>
           <button class="btn btn-ghost btn-sm" id="delete-anime-btn" type="button">Eliminar anime</button>
         </div>
+      </div>
+    </div>
+
+    <h4 class="admin-subhead">Logo del anime</h4>
+    <p class="admin-hint">Sube una imagen del logo/isotipo (fondo transparente, formato PNG recomendado). Si la subes, reemplaza el título de texto en el slider del inicio y en la ficha del anime.</p>
+    <div class="admin-logo-row">
+      <div class="admin-logo-preview">
+        ${anime.logo ? `<img src="${escapeAttr(anime.logo)}" alt="Logo de ${escapeAttr(anime.title)}">` : `<span class="admin-empty">Sin logo — se muestra el título de texto</span>`}
+      </div>
+      <div class="admin-logo-controls">
+        <label class="btn btn-ghost btn-sm admin-logo-upload-btn">
+          Subir imagen…
+          <input type="file" id="logo-file-input" accept="image/*" hidden>
+        </label>
+        ${anime.logo ? `<button class="btn btn-ghost btn-sm" type="button" id="remove-logo-btn">Quitar logo</button>` : ""}
+        <p class="admin-hint" id="logo-upload-status"></p>
       </div>
     </div>
 
@@ -500,6 +603,19 @@ function renderAnimeDetail() {
 
   document.querySelector("#delete-anime-btn").addEventListener("click", () => handleDeleteAnime(anime.id));
 
+  const logoInput = document.querySelector("#logo-file-input");
+  if (logoInput) {
+    logoInput.addEventListener("change", () => handleLogoUpload(anime.id, logoInput));
+  }
+  const removeLogoBtn = document.querySelector("#remove-logo-btn");
+  if (removeLogoBtn) {
+    removeLogoBtn.addEventListener("click", () => {
+      if (!confirm("¿Quitar el logo? Volverá a mostrarse el título de texto.")) return;
+      updateAnimeLogo(anime.id, null);
+      renderAnimeDetail();
+    });
+  }
+
   detailEl.querySelectorAll("[data-edit]").forEach(btn => {
     btn.addEventListener("click", () => {
       editingEpisodeNumber = Number(btn.dataset.edit);
@@ -564,6 +680,46 @@ function handleInfoSubmit(e) {
 
   updateAnimeInfo(anime.id, { audio, cast });
   renderAnimeDetail();
+}
+
+/* Sube el archivo elegido a Firebase Storage (carpeta "logos/") y guarda
+   la URL de descarga resultante como el logo del anime. Requiere que
+   Storage esté habilitado en la consola de Firebase — ver la nota al
+   final de este archivo si el botón se queda pegado en "Subiendo…". */
+async function handleLogoUpload(animeId, fileInput) {
+  const file = fileInput.files && fileInput.files[0];
+  const status = document.querySelector("#logo-upload-status");
+  if (!file) return;
+
+  if (!file.type.startsWith("image/")) {
+    if (status) status.textContent = "Elige un archivo de imagen (PNG, JPG, WEBP…).";
+    fileInput.value = "";
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    if (status) status.textContent = "La imagen pesa más de 5 MB. Usa una más liviana.";
+    fileInput.value = "";
+    return;
+  }
+
+  if (status) status.textContent = "Subiendo…";
+
+  try {
+    const ext = (file.name.split(".").pop() || "png").toLowerCase();
+    const path = `logos/${animeId}-${Date.now()}.${ext}`;
+    const ref = storage.ref().child(path);
+    await ref.put(file);
+    const url = await ref.getDownloadURL();
+    updateAnimeLogo(animeId, url);
+    renderAnimeDetail();
+  } catch (err) {
+    console.error(err);
+    if (status) {
+      status.textContent = (err && err.code === "storage/unauthorized")
+        ? "Firebase Storage rechazó la subida (revisa sus Reglas de seguridad — ver nota al final de admin.js)."
+        : "No se pudo subir la imagen. Intenta de nuevo.";
+    }
+  }
 }
 
 function handleDeleteAnime(id) {
@@ -654,4 +810,33 @@ function normalizeTrailerUrl(rawUrl) {
    Publica esas reglas después de crear el usuario correo/contraseña
    (o de iniciar sesión una vez con Google) en Firebase Authentication.
    Sin este paso, el candado de este archivo es solo cosmético.
+   ============================================================ */
+
+/* ============================================================
+   REGLAS DE FIREBASE STORAGE (para el logo del anime)
+   ------------------------------------------------------------
+   El botón "Subir imagen…" de la sección "Logo del anime" usa
+   Firebase Storage (ver handleLogoUpload arriba). Antes de que
+   funcione:
+
+   1. En la consola de Firebase → Storage, actívalo si no lo has
+      hecho (botón "Comenzar").
+   2. En la pestaña "Reglas" de Storage, usa algo como esto para que
+      cualquiera pueda VER los logos pero solo tu cuenta autorizada
+      pueda SUBIRLOS (ajusta el correo a los de ADMIN_EMAILS):
+
+   rules_version = '2';
+   service firebase.storage {
+     match /b/{bucket}/o {
+       match /logos/{fileName} {
+         allow read: if true;
+         allow write: if request.auth != null &&
+           request.auth.token.email in [
+             "tu-correo-admin@gmail.com"
+           ] &&
+           request.resource.size < 5 * 1024 * 1024 &&
+           request.resource.contentType.matches('image/.*');
+       }
+     }
+   }
    ============================================================ */

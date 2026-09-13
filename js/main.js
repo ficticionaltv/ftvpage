@@ -74,7 +74,9 @@ function initHeroSlider() {
             <div class="hero-genres">
               ${(a.genres || []).map(g => `<span class="tag">${g}</span>`).join("")}
             </div>
-            <h1 class="hero-title">${a.title}</h1>
+            ${a.logo
+              ? `<img class="hero-logo" src="${a.logo}" alt="${a.title}">`
+              : `<h1 class="hero-title">${a.title}</h1>`}
             <div class="hero-rating">
               <span class="stars">${starString(a.rating)}</span>
               <span>${Number.isFinite(a.rating) ? a.rating.toFixed(1) : "0.0"} · ${a.year}</span>

@@ -64,6 +64,7 @@ function normalizeAnimeRecord(a) {
     trailerEmbedUrl: a.trailerEmbedUrl || null,
     audio: a.audio || null,
     cast: a.cast || null,
+    logo: a.logo || null,
     episodes,
     episodesCount: episodes.length,
     source: a.source || "seed",
@@ -258,6 +259,7 @@ function addAnimeToLibrary(anime) {
     trailerEmbedUrl: anime.trailerEmbedUrl || null,
     audio: anime.audio || null,
     cast: anime.cast || null,
+    logo: anime.logo || null,
     episodes: [],
     source: "anilist",
     anilistId: anime.anilistId != null ? anime.anilistId : null
@@ -292,6 +294,17 @@ function updateAnimeInfo(animeId, { audio, cast } = {}) {
   if (!anime) return null;
   anime.audio = audio && audio.trim() ? audio.trim() : null;
   anime.cast = cast && cast.trim() ? cast.trim() : null;
+  persist();
+  return anime;
+}
+
+/* Actualiza el logo/isotipo del anime (imagen que reemplaza al título de
+   texto en el slider y en la ficha). Se guarda como una URL de imagen
+   (subida a Firebase Storage desde el panel, o pegada a mano). */
+function updateAnimeLogo(animeId, logoUrl) {
+  const anime = getAnimeById(animeId);
+  if (!anime) return null;
+  anime.logo = logoUrl && logoUrl.trim() ? logoUrl.trim() : null;
   persist();
   return anime;
 }
