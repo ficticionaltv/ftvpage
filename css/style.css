@@ -1291,3 +1291,36 @@ button { font-family: inherit; }
   font-size: .88rem;
   background: var(--surface);
 }
+
+/* ---------------------------------------------------------------------- */
+/* Ficha de anime: tráiler + episodios uno al lado del otro en pantallas  */
+/* grandes (mitad y mitad). En mobile/tablet se quedan apilados, uno     */
+/* arriba (tráiler) y el otro abajo (episodios), como ya venía siendo.   */
+/* ---------------------------------------------------------------------- */
+@media (min-width: 941px) {
+  .anime-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+    gap: 0 32px;
+  }
+  .anime-split > .trailer-section,
+  .anime-split > .section {
+    margin: 0;
+    padding: 0;
+  }
+  /* La cuadrícula de episodios se vuelve una caja con scroll propio, del
+     mismo alto (relación 16:9) que el reproductor del tráiler, para que
+     ambas mitades ocupen realmente la misma altura visual. */
+  .anime-split .episodes-scroll {
+    aspect-ratio: 16 / 9;
+    overflow-y: auto;
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius);
+    padding: 12px;
+  }
+  .anime-split .episodes-grid {
+    padding: 0;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
