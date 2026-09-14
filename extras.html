@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Catálogo — FicticionalTV</title>
+<title>Extras — FicticionalTV</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -14,10 +14,10 @@
   <nav class="nav container">
     <a href="index.html" class="logo"><img src="img/logo.png" alt="FicticionalTV" class="logo-img" onerror="this.style.display=&#39;none&#39;;this.nextElementSibling.style.display=&#39;inline-flex&#39;"><span class="logo-fallback"><span>Fictic</span><span class="logo-accent">ional</span><span class="logo-dot">TV</span></span></a>
     <ul class="nav-links">
-      <li><a href="catalogo.html" aria-current="page">Catálogo</a></li>
+      <li><a href="catalogo.html">Catálogo</a></li>
       <li><a href="categorias.html">Categorías</a></li>
       <li><a href="recomendaciones.html">Recomendaciones</a></li>
-      <li><a href="extras.html">Extras</a></li>
+      <li><a href="extras.html" aria-current="page">Extras</a></li>
     </ul>
     <form class="nav-search" data-header-search role="search">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>
@@ -36,13 +36,13 @@
 
 <main class="container">
   <div class="page-header">
-    <h1>Catálogo completo</h1>
-    <p>Explora los 12 títulos disponibles en FicticionalTV, con filtros por búsqueda y orden.</p>
+    <h1>Extras</h1>
+    <p>Contenido adicional de FicticionalTV: especiales, cortos y más, organizados en audio y video.</p>
 
     <div class="filters-bar">
       <div class="nav-search" role="search">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>
-        <input type="search" id="catalog-search" placeholder="Buscar por título..." aria-label="Buscar en el catálogo">
+        <input type="search" id="catalog-search" placeholder="Buscar por título..." aria-label="Buscar en extras">
       </div>
       <select id="sort-select" class="select" aria-label="Ordenar por">
         <option value="fecha">Por fecha</option>
@@ -54,9 +54,9 @@
   </div>
 
   <div class="grid" id="catalog-grid"></div>
-  <p class="empty-state" id="empty-state" style="display:none;">No se encontraron animes con ese criterio de búsqueda.</p>
+  <p class="empty-state" id="empty-state" style="display:none;">Todavía no hay extras cargados. Agrégalos desde el panel de administración.</p>
 
-  <nav class="pagination" id="pagination" aria-label="Paginación del catálogo"></nav>
+  <nav class="pagination" id="pagination" aria-label="Paginación de extras"></nav>
 </main>
 
 <footer class="site-footer">
@@ -97,6 +97,6 @@
 <script src="js/data.js"></script>
 <script src="js/store.js"></script>
 <script src="js/main.js"></script>
-<script src="js/catalogo.js"></script>
+<script src="js/extras-catalogo.js"></script>
 </body>
 </html>

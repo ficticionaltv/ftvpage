@@ -14,10 +14,10 @@
   <nav class="nav container">
     <a href="index.html" class="logo"><img src="img/logo.png" alt="FicticionalTV" class="logo-img" onerror="this.style.display=&#39;none&#39;;this.nextElementSibling.style.display=&#39;inline-flex&#39;"><span class="logo-fallback"><span>Fictic</span><span class="logo-accent">ional</span><span class="logo-dot">TV</span></span></a>
     <ul class="nav-links">
-      <li><a href="index.html">Inicio</a></li>
       <li><a href="catalogo.html">Catálogo</a></li>
       <li><a href="categorias.html">Categorías</a></li>
       <li><a href="recomendaciones.html">Recomendaciones</a></li>
+      <li><a href="extras.html">Extras</a></li>
     </ul>
     <form class="nav-search" data-header-search role="search">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="5"/><path d="M11 11l3.5 3.5"/></svg>
@@ -108,6 +108,55 @@
         <div class="admin-anime-detail" id="admin-anime-detail"></div>
       </div>
     </section>
+
+    <section class="admin-section">
+      <div class="section-head">
+        <h2>Agregar extra</h2>
+      </div>
+      <p class="admin-hint">Los extras son contenido aparte del catálogo de animes (especiales, cortos, etc.). Cada extra tiene su propia ficha con dos cuadrículas, "Audio" y "Video" — ambas guardan videos, solo están separadas para organizarlas.</p>
+      <form class="admin-episode-form" id="extra-create-form">
+        <label>Título
+          <input class="input" type="text" id="extra-title" placeholder="Ej. Especial de aniversario" required>
+        </label>
+        <label>Sinopsis
+          <textarea class="input" id="extra-synopsis" rows="3" placeholder="Descripción breve del extra"></textarea>
+        </label>
+        <div class="form-row">
+          <label>Año
+            <input class="input" type="number" id="extra-year" placeholder="2026">
+          </label>
+          <label>Calificación (0 a 10)
+            <input class="input" type="number" step="0.1" min="0" max="10" id="extra-rating" placeholder="0">
+          </label>
+        </div>
+        <label>Estudio
+          <input class="input" type="text" id="extra-studio" placeholder="Ej. FicticionalTV">
+        </label>
+        <label>Géneros (separados por coma)
+          <input class="input" type="text" id="extra-genres" placeholder="Ej. Especial, Detrás de cámaras">
+        </label>
+        <label>Portada — imagen vertical (URL)
+          <input class="input" type="url" id="extra-cover" placeholder="https://ejemplo.com/portada.jpg">
+        </label>
+        <label>Imagen de fondo / banner (URL)
+          <input class="input" type="url" id="extra-banner" placeholder="https://ejemplo.com/fondo.jpg">
+        </label>
+        <p class="admin-hint">Puedes dejar la portada y el fondo vacíos y usar una imagen de relleno automática por ahora; luego los editas desde su ficha, igual que con un anime.</p>
+        <div class="admin-anime-actions">
+          <button class="btn btn-primary btn-sm" type="submit">Crear extra</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="admin-section">
+      <div class="section-head">
+        <h2>Mis extras</h2>
+      </div>
+      <div class="admin-library-layout">
+        <div class="admin-anime-list" id="admin-extras-list"></div>
+        <div class="admin-anime-detail" id="admin-extras-detail"></div>
+      </div>
+    </section>
   </div>
 
 </main>
@@ -122,10 +171,10 @@
       <div class="footer-col">
         <h4>Explorar</h4>
         <ul>
-          <li><a href="index.html">Inicio</a></li>
           <li><a href="catalogo.html">Catálogo</a></li>
           <li><a href="categorias.html">Categorías</a></li>
           <li><a href="recomendaciones.html">Recomendaciones</a></li>
+          <li><a href="extras.html">Extras</a></li>
         </ul>
       </div>
       <div class="footer-col">
@@ -153,5 +202,6 @@
 <script src="js/anilist.js"></script>
 <script src="js/main.js"></script>
 <script src="js/admin.js"></script>
+<script src="js/admin-extras.js"></script>
 </body>
 </html>
