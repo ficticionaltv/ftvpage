@@ -195,6 +195,20 @@ SEED_ANIME_LIST.forEach(a => {
 });
 
 /* ============================================================
+   Extras
+   ------------------------------------------------------------
+   Contenido aparte del catálogo de animes (por ejemplo: doblajes
+   sueltos, cortos, especiales) agrupado en dos secciones dentro de
+   cada ficha — "Audio" y "Video" — ambas son en realidad video, solo
+   se muestran en cuadrículas separadas para organizarlas. Se agregan
+   siempre desde el panel de administración, así que la semilla
+   arranca vacía; js/store.js combina esto con lo guardado en
+   Firestore y lo expone como EXTRAS_LIST.
+   ============================================================ */
+const SEED_EXTRAS_LIST = [];
+
+
+/* ============================================================
    Normalización de links de video (tráiler y capítulos)
    ------------------------------------------------------------
    Convierte el link "normal" que se copia de la barra de

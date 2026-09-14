@@ -36,6 +36,15 @@ function cloneSeedLibrary() {
   }));
 }
 
+function cloneSeedExtras() {
+  return SEED_EXTRAS_LIST.map(x => ({
+    ...x,
+    genres: [...(x.genres || [])],
+    audio: (x.audio || []).map(item => ({ ...item })),
+    video: (x.video || []).map(item => ({ ...item }))
+  }));
+}
+
 /* Normaliza un registro de anime tal como venga de Firestore (semilla,
    agregado por AniList, o incluso editado a mano en la consola de
    Firebase). Si a un documento le falta algún campo — sobre todo
@@ -99,11 +108,55 @@ function normalizeEpisodeRecord(animeId, ep) {
   };
 }
 
+/* ------------------------------------------------------------
+   Extras (contenido aparte del catálogo de animes, agrupado en
+   "Audio" y "Video" — ambas listas guardan videos, solo se muestran
+   en dos cuadrículas separadas dentro de la ficha del extra).
+   ------------------------------------------------------------ */
+function normalizeExtraRecord(x) {
+  x = x || {};
+  const id = x.id || slugify(x.title || "extra");
+  const audio = Array.isArray(x.audio) ? x.audio.map(item => normalizeExtraItemRecord(id, "audio", item)) : [];
+  const video = Array.isArray(x.video) ? x.video.map(item => normalizeExtraItemRecord(id, "video", item)) : [];
+
+  return {
+    ...x,
+    id,
+    title: x.title || "Sin título",
+    synopsis: x.synopsis || "Sinopsis no disponible todavía.",
+    genres: Array.isArray(x.genres) && x.genres.length ? x.genres : ["Sin categoría"],
+    rating: normalizeRating(x.rating),
+    year: x.year || new Date().getFullYear(),
+    studio: x.studio || "Estudio desconocido",
+    popularityRank: typeof x.popularityRank === "number" ? x.popularityRank : 0,
+    cover: x.cover || coverUrl(id),
+    banner: x.banner || x.cover || bannerUrl(id),
+    logo: x.logo || null,
+    audio,
+    video,
+    source: "extra"
+  };
+}
+
+function normalizeExtraItemRecord(extraId, kind, item) {
+  item = item || {};
+  const number = typeof item.number === "number" && !Number.isNaN(item.number) ? item.number : 1;
+  return {
+    ...item,
+    number,
+    title: item.title && String(item.title).trim() ? item.title : `${kind === "audio" ? "Audio" : "Video"} ${number}`,
+    thumb: item.thumb || epThumbUrl(`${extraId}-${kind}`, number),
+    duration: item.duration && String(item.duration).trim() ? item.duration : "23 min",
+    embedUrl: item.embedUrl ? normalizeEmbedUrl(item.embedUrl) : null
+  };
+}
+
 /* Lista global usada por el resto de los scripts (main.js, catalogo.js,
    categorias.js, anime.js, capitulo.js, admin.js) tal como antes lo hacía
    data.js. Arranca con el catálogo semilla como respaldo inmediato
    mientras llega la primera respuesta real de Firestore. */
 let ANIME_LIST = cloneSeedLibrary();
+let EXTRAS_LIST = cloneSeedExtras();
 let libraryReady = false;
 
 /* "connecting" mientras esperamos la primera respuesta, "online" en
@@ -166,6 +219,7 @@ function startLibrarySync() {
     if (!snap.exists) {
       return ref.set({
         items: cloneSeedLibrary(),
+        extras: cloneSeedExtras(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
     }
@@ -178,6 +232,7 @@ function startLibrarySync() {
     if (docSnap.exists) {
       const data = docSnap.data();
       ANIME_LIST = Array.isArray(data.items) ? data.items.map(normalizeAnimeRecord) : [];
+      EXTRAS_LIST = Array.isArray(data.extras) ? data.extras.map(normalizeExtraRecord) : [];
     }
     const firstLoad = !libraryReady;
     libraryReady = true;
@@ -216,6 +271,7 @@ function onLibraryChange(callback) {
 function persist() {
   libraryDocRef().set({
     items: ANIME_LIST,
+    extras: EXTRAS_LIST,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   }).catch(err => {
     console.warn("FicticionalTV: no se pudo guardar la biblioteca en Firebase.", err);
@@ -327,6 +383,7 @@ function updateAnimeLogo(animeId, logoUrl) {
 function resetLibraryToSeed() {
   const seeded = cloneSeedLibrary();
   ANIME_LIST = seeded;
+  EXTRAS_LIST = cloneSeedExtras();
   persist();
   return seeded;
 }
@@ -374,5 +431,140 @@ function removeEpisode(animeId, number) {
   if (!anime) return;
   anime.episodes = anime.episodes.filter(e => e.number !== number);
   anime.episodesCount = anime.episodes.length;
+  persist();
+}
+
+/* ============================================================
+   Extras — CRUD
+   ------------------------------------------------------------
+   Espejo de las funciones de arriba para animes/capítulos, pero
+   aplicado a EXTRAS_LIST. Cada extra tiene dos listas de video
+   independientes, "audio" y "video" (el nombre es solo la etiqueta
+   de la sección; ambas cosas son video), identificadas por `kind`.
+   ============================================================ */
+function getExtraById(id) {
+  return EXTRAS_LIST.find(x => x.id === id);
+}
+
+function nextExtraPopularityRank() {
+  return EXTRAS_LIST.length
+    ? Math.max(...EXTRAS_LIST.map(x => x.popularityRank || 0)) + 1
+    : 1;
+}
+
+function extraItemList(extra, kind) {
+  return kind === "video" ? extra.video : extra.audio;
+}
+
+/* Agrega un extra nuevo a la biblioteca (creado a mano desde el panel,
+   no viene de AniList). */
+function addExtraToLibrary(extra) {
+  const base = slugify(extra.title);
+  let id = base;
+  let n = 2;
+  while (EXTRAS_LIST.some(x => x.id === id)) id = `${base}-${n++}`;
+
+  const record = {
+    id,
+    title: extra.title,
+    synopsis: extra.synopsis && extra.synopsis.trim() ? extra.synopsis.trim() : "Sinopsis no disponible todavía.",
+    genres: extra.genres && extra.genres.length ? extra.genres : ["Sin categoría"],
+    rating: normalizeRating(extra.rating),
+    year: extra.year || new Date().getFullYear(),
+    studio: extra.studio || "Estudio desconocido",
+    popularityRank: nextExtraPopularityRank(),
+    cover: extra.cover || coverUrl(id),
+    banner: extra.banner || extra.cover || bannerUrl(id),
+    logo: extra.logo || null,
+    audio: [],
+    video: [],
+    source: "extra"
+  };
+
+  EXTRAS_LIST.push(record);
+  persist();
+  return record;
+}
+
+function removeExtraFromLibrary(id) {
+  EXTRAS_LIST = EXTRAS_LIST.filter(x => x.id !== id);
+  persist();
+}
+
+/* Actualiza los campos generales de la ficha del extra (sinopsis,
+   género, estudio, etc). */
+function updateExtraDetails(extraId, patch = {}) {
+  const extra = getExtraById(extraId);
+  if (!extra) return null;
+  if (patch.title && patch.title.trim()) extra.title = patch.title.trim();
+  if (typeof patch.synopsis === "string") extra.synopsis = patch.synopsis.trim() || "Sinopsis no disponible todavía.";
+  if (Array.isArray(patch.genres)) extra.genres = patch.genres.length ? patch.genres : ["Sin categoría"];
+  if (patch.studio && patch.studio.trim()) extra.studio = patch.studio.trim();
+  persist();
+  return extra;
+}
+
+function updateExtraBanner(extraId, newBannerUrl) {
+  const extra = getExtraById(extraId);
+  if (!extra) return null;
+  extra.banner = newBannerUrl && newBannerUrl.trim() ? newBannerUrl.trim() : (extra.cover || bannerUrl(extraId));
+  persist();
+  return extra;
+}
+
+function updateExtraLogo(extraId, logoUrl) {
+  const extra = getExtraById(extraId);
+  if (!extra) return null;
+  extra.logo = logoUrl && logoUrl.trim() ? logoUrl.trim() : null;
+  persist();
+  return extra;
+}
+
+/* Agrega o reemplaza (por número) un elemento de audio o video de un
+   extra. */
+function addExtraItem(extraId, kind, item) {
+  const extra = getExtraById(extraId);
+  if (!extra) return null;
+  const list = extraItemList(extra, kind);
+
+  const number = item.number || (
+    list.length ? Math.max(...list.map(i => i.number)) + 1 : 1
+  );
+
+  const record = {
+    number,
+    title: item.title && item.title.trim() ? item.title.trim() : `${kind === "audio" ? "Audio" : "Video"} ${number}`,
+    thumb: item.thumb || epThumbUrl(`${extra.id}-${kind}`, number),
+    duration: item.duration && item.duration.trim() ? item.duration.trim() : "23 min",
+    embedUrl: item.embedUrl ? normalizeEmbedUrl(item.embedUrl) : null
+  };
+
+  const filtered = list.filter(i => i.number !== number);
+  filtered.push(record);
+  filtered.sort((a, b) => a.number - b.number);
+  if (kind === "video") extra.video = filtered; else extra.audio = filtered;
+  persist();
+  return record;
+}
+
+function updateExtraItem(extraId, kind, number, patch) {
+  const extra = getExtraById(extraId);
+  if (!extra) return null;
+  const list = extraItemList(extra, kind);
+  const item = list.find(i => i.number === number);
+  if (!item) return null;
+  if (patch.title && patch.title.trim()) item.title = patch.title.trim();
+  if (patch.duration && patch.duration.trim()) item.duration = patch.duration.trim();
+  item.embedUrl = patch.embedUrl ? normalizeEmbedUrl(patch.embedUrl) : null;
+  item.thumb = (patch.thumb && patch.thumb.trim()) ? patch.thumb.trim() : epThumbUrl(`${extra.id}-${kind}`, item.number);
+  persist();
+  return item;
+}
+
+function removeExtraItem(extraId, kind, number) {
+  const extra = getExtraById(extraId);
+  if (!extra) return;
+  const list = extraItemList(extra, kind).filter(i => i.number !== number);
+  if (kind === "video") extra.video = list; else extra.audio = list;
   persist();
 }
