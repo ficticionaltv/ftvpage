@@ -29,6 +29,13 @@ function initMobileNav() {
   const nav = document.querySelector(".nav");
   if (!toggle || !nav) return;
 
+  // Bloquea el scroll del body mientras el menú o el buscador móvil
+  // ocupan toda la pantalla, para que no se pueda desplazar el fondo.
+  const syncBodyScroll = () => {
+    const anyOpen = nav.classList.contains("is-open") || nav.classList.contains("is-search-open");
+    document.body.classList.toggle("nav-lock-scroll", anyOpen);
+  };
+
   toggle.addEventListener("click", () => {
     const isOpen = nav.classList.toggle("is-open");
     toggle.setAttribute("aria-expanded", String(isOpen));
@@ -36,6 +43,7 @@ function initMobileNav() {
       nav.classList.remove("is-search-open");
       searchToggle.setAttribute("aria-expanded", "false");
     }
+    syncBodyScroll();
   });
 
   if (searchToggle) {
@@ -48,8 +56,18 @@ function initMobileNav() {
         const input = nav.querySelector(".nav-search input");
         if (input) requestAnimationFrame(() => input.focus());
       }
+      syncBodyScroll();
     });
   }
+
+  // Cierra el menú a pantalla completa al tocar un enlace.
+  nav.querySelectorAll(".nav-links a").forEach((link) => {
+    link.addEventListener("click", () => {
+      nav.classList.remove("is-open");
+      toggle.setAttribute("aria-expanded", "false");
+      syncBodyScroll();
+    });
+  });
 }
 
 /* Buscador del header: redirige al catálogo con la consulta */
