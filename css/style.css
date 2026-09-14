@@ -669,23 +669,21 @@ button { font-family: inherit; }
 
 .detail-banner {
   position: relative;
-  height: min(52vh, 420px);
-  min-height: 320px;
+  height: min(58vh, 480px);
+  min-height: 380px;
   background-size: cover;
   background-position: center 20%;
 }
-/* Degradado desactivado temporalmente a pedido — descomentar para restaurarlo.
 .detail-banner::after {
   content: "";
   position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(18,18,22,.2), var(--bg) 92%);
+  background: linear-gradient(180deg, rgba(18,18,22,0) 0%, rgba(18,18,22,.45) 72%, var(--bg) 97%);
 }
-*/
 
 .detail-info {
   position: relative;
   z-index: 2;
-  margin-top: -140px;
+  margin-top: -230px;
   display: grid;
   grid-template-columns: 220px 1fr;
   grid-template-areas:
@@ -713,10 +711,6 @@ button { font-family: inherit; }
 .detail-meta .sep { color: var(--surface-border); }
 
 .synopsis-card {
-  background: var(--surface);
-  border: 1px solid var(--surface-border);
-  border-radius: var(--radius);
-  padding: 20px 24px;
   margin-top: 18px;
   display: grid;
   grid-template-columns: 1fr 260px;
@@ -725,12 +719,11 @@ button { font-family: inherit; }
 .synopsis-main { min-width: 0; }
 
 /* Sección editable de información (audio, reparto, género, estudio) que
-   se muestra a la derecha de la sinopsis, dentro del mismo recuadro. Los
-   valores se completan desde el panel de administración. */
+   se muestra a la derecha de la sinopsis, en línea con el resto del texto
+   (sin recuadro propio). Los valores se completan desde el panel de
+   administración. */
 .detail-info-list {
   margin: 0;
-  padding-left: 24px;
-  border-left: 1px solid var(--surface-border);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -785,7 +778,7 @@ button { font-family: inherit; }
   .detail-info {
     grid-template-columns: 1fr;
     grid-template-areas: "poster" "main" "synopsis";
-    margin-top: -70px;
+    margin-top: -90px;
     gap: 20px;
   }
   .detail-poster-col { max-width: 220px; margin: 0 auto; }
@@ -795,9 +788,7 @@ button { font-family: inherit; }
   .detail-main .hero-logo { margin-left: auto; margin-right: auto; }
   .synopsis-card { grid-template-columns: 1fr; }
   .detail-info-list {
-    padding-left: 0;
     padding-top: 14px;
-    border-left: none;
     border-top: 1px solid var(--surface-border);
   }
 }
