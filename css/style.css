@@ -229,22 +229,34 @@ button { font-family: inherit; }
 @media (max-width: 940px) {
   .nav-links, .nav-search { display: none; }
   .nav-toggle { display: block; margin-left: auto; }
-  .nav.is-open .nav-links {
-    display: flex;
-    flex-direction: column;
-    position: absolute;
-    top: 76px; left: 0; right: 0;
-    background: var(--bg);
-    border-bottom: 1px solid var(--surface-border);
-    padding: 18px 32px 26px;
-    gap: 4px;
-  }
-  .nav.is-open .nav-links a { padding: 10px 0; border-bottom: 1px solid var(--surface-border); }
+
+  .nav.is-open { flex-wrap: wrap; row-gap: 0; }
+
+  .nav.is-open .nav-links,
   .nav.is-open .nav-search {
     display: flex;
-    position: absolute;
-    top: 216px; left: 32px; right: 32px;
+    order: 5;
+    flex: 0 0 100%;
+    width: 100%;
+  }
+
+  .nav.is-open .nav-links {
+    flex-direction: column;
+    gap: 4px;
+    margin: 0 calc(-1 * var(--pad));
+    padding: 18px var(--pad) 8px;
+    background: var(--bg);
+    border-top: 1px solid var(--surface-border);
+  }
+  .nav.is-open .nav-links a { padding: 10px 0; border-bottom: 1px solid var(--surface-border); }
+
+  .nav.is-open .nav-search {
+    margin: 0 calc(-1 * var(--pad));
     max-width: none;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    padding: 9px var(--pad);
   }
 }
 
@@ -662,11 +674,13 @@ button { font-family: inherit; }
   background-size: cover;
   background-position: center 20%;
 }
+/* Degradado desactivado temporalmente a pedido — descomentar para restaurarlo.
 .detail-banner::after {
   content: "";
   position: absolute; inset: 0;
   background: linear-gradient(180deg, rgba(18,18,22,.2), var(--bg) 92%);
 }
+*/
 
 .detail-info {
   position: relative;
