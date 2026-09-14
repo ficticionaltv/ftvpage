@@ -749,14 +749,6 @@ button { font-family: inherit; }
 .synopsis-text {
   margin: 0;
   color: var(--text-muted);
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-}
-.synopsis-text.is-expanded {
-  -webkit-line-clamp: unset;
-  display: block;
 }
 .synopsis-toggle {
   display: none;
@@ -790,6 +782,19 @@ button { font-family: inherit; }
   .detail-info-list {
     padding-top: 14px;
     border-top: 1px solid var(--surface-border);
+  }
+
+  /* En móvil la sinopsis se recorta a 3 líneas y se expande con el botón;
+     en pantallas más grandes se muestra completa (ver reglas base arriba). */
+  .synopsis-text {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+  }
+  .synopsis-text.is-expanded {
+    -webkit-line-clamp: unset;
+    display: block;
   }
 }
 
