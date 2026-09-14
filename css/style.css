@@ -194,8 +194,8 @@ button { font-family: inherit; }
   display: flex;
   align-items: center;
   gap: 10px;
-  flex: 1;
-  max-width: 360px;
+  width: 320px;
+  flex: 0 0 auto;
   margin-left: auto;
   background: var(--surface);
   border: 1px solid var(--surface-border);
@@ -215,7 +215,11 @@ button { font-family: inherit; }
 }
 .nav-search input::placeholder { color: var(--text-faint); }
 
-.nav-actions { display: flex; align-items: center; gap: 14px; margin-left: auto; }
+/* margin-left: auto vive únicamente en .nav-search: así toda la fila
+   libre empuja el buscador hasta el borde derecho. Si .nav-actions
+   también tuviera auto-margin, el espacio libre se repartiría entre
+   los dos y el buscador quedaba "flotando" en el centro. */
+.nav-actions { display: flex; align-items: center; gap: 14px; }
 
 .nav-toggle {
   display: none;
@@ -240,36 +244,59 @@ button { font-family: inherit; }
   .nav-toggle { display: block; }
   .nav-search-toggle { display: block; }
 
-  .nav.is-open,
-  .nav.is-search-open { flex-wrap: wrap; row-gap: 0; }
+  /* El menú y el buscador móviles se muestran como paneles a pantalla
+     completa, posicionados justo debajo del header (que mide 76px de
+     alto) en vez de "empujar" el contenido del header hacia abajo.
+     Así el header conserva siempre su tamaño y ambos paneles se ven
+     como algo que "sale" de él, no como algo apretado dentro. */
+
+  .nav-toggle, .nav-search-toggle { position: relative; z-index: 210; }
 
   .nav.is-open .nav-links {
     display: flex;
-    order: 5;
-    flex: 0 0 100%;
+    position: fixed;
+    top: 76px;
+    left: 0;
+    right: 0;
+    bottom: 0;
     width: 100%;
     flex-direction: column;
-    gap: 4px;
-    margin: 0 calc(-1 * var(--pad));
-    padding: 18px var(--pad) 8px;
+    gap: 2px;
+    margin: 0;
+    padding: 22px var(--pad) 32px;
     background: var(--bg);
     border-top: 1px solid var(--surface-border);
+    overflow-y: auto;
+    z-index: 200;
+    font-size: 1.15rem;
   }
-  .nav.is-open .nav-links a { padding: 10px 0; border-bottom: 1px solid var(--surface-border); }
+  .nav.is-open .nav-links a {
+    padding: 16px 4px;
+    border-bottom: 1px solid var(--surface-border);
+  }
 
   .nav.is-search-open .nav-search {
     display: flex;
-    order: 5;
-    flex: 0 0 100%;
+    position: fixed;
+    top: 76px;
+    left: 0;
+    right: 0;
     width: 100%;
-    margin: 0 calc(-1 * var(--pad));
+    margin: 0;
     max-width: none;
     border-radius: 0;
     border-left: none;
     border-right: none;
-    padding: 9px var(--pad);
+    border-top: 1px solid var(--surface-border);
+    padding: 14px var(--pad);
+    background: var(--bg);
+    z-index: 200;
   }
 }
+
+/* Evita que el fondo se desplace mientras el menú o el buscador móvil
+   están abiertos a pantalla completa. */
+body.nav-lock-scroll { overflow: hidden; }
 
 /* ---------------------------------------------------------------------- */
 /* Hero / Slider                                                          */
