@@ -25,12 +25,31 @@ function initHeaderScroll() {
 /* Menú móvil */
 function initMobileNav() {
   const toggle = document.querySelector(".nav-toggle");
+  const searchToggle = document.querySelector(".nav-search-toggle");
   const nav = document.querySelector(".nav");
   if (!toggle || !nav) return;
+
   toggle.addEventListener("click", () => {
     const isOpen = nav.classList.toggle("is-open");
     toggle.setAttribute("aria-expanded", String(isOpen));
+    if (isOpen && searchToggle) {
+      nav.classList.remove("is-search-open");
+      searchToggle.setAttribute("aria-expanded", "false");
+    }
   });
+
+  if (searchToggle) {
+    searchToggle.addEventListener("click", () => {
+      const isOpen = nav.classList.toggle("is-search-open");
+      searchToggle.setAttribute("aria-expanded", String(isOpen));
+      if (isOpen) {
+        nav.classList.remove("is-open");
+        toggle.setAttribute("aria-expanded", "false");
+        const input = nav.querySelector(".nav-search input");
+        if (input) requestAnimationFrame(() => input.focus());
+      }
+    });
+  }
 }
 
 /* Buscador del header: redirige al catálogo con la consulta */
