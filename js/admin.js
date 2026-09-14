@@ -521,10 +521,10 @@ function renderAnimeDetail() {
 
     <h4 class="admin-subhead">Tráiler</h4>
     <form class="admin-episode-form" id="trailer-form">
-      <label>URL del tráiler (link normal de YouTube/Dailymotion, o una URL de embed)
+      <label>URL del tráiler (link normal de YouTube/Dailymotion/Vimeo, o una URL de embed)
         <input class="input" type="url" id="trailer-url" value="${escapeAttr(anime.trailerEmbedUrl || "")}" placeholder="https://www.youtube.com/watch?v=xxxxxxxx">
       </label>
-      <p class="admin-hint">Pega el link tal cual lo copias del navegador (de YouTube o Dailymotion) — se convierte automáticamente al formato de reproductor. Déjalo vacío y guarda para quitar el tráiler.</p>
+      <p class="admin-hint">Pega el link tal cual lo copias del navegador (YouTube, Dailymotion, Vimeo) — se convierte automáticamente al formato de reproductor. Déjalo vacío y guarda para quitar el tráiler.</p>
       <div class="admin-anime-actions">
         <button class="btn btn-primary btn-sm" type="submit">Guardar tráiler</button>
       </div>
@@ -557,10 +557,10 @@ function renderAnimeDetail() {
       <label>Título del episodio
         <input class="input" type="text" id="ep-title" value="${editing ? escapeAttr(editing.title) : ""}" placeholder="Ej. El despertar" required>
       </label>
-      <label>URL del reproductor (embed)
-        <input class="input" type="url" id="ep-embed" value="${editing ? escapeAttr(editing.embedUrl || "") : ""}" placeholder="https://ejemplo.com/embed/xxxx">
+      <label>URL del reproductor (link normal de YouTube/Dailymotion/Vimeo, o una URL de embed)
+        <input class="input" type="url" id="ep-embed" value="${editing ? escapeAttr(editing.embedUrl || "") : ""}" placeholder="https://www.youtube.com/watch?v=xxxxxxxx">
       </label>
-      <p class="admin-hint">Pega ahí la URL de "embed" que te da tu proveedor de video (la que normalmente va dentro de un &lt;iframe&gt;). Puedes dejarlo vacío y completarlo después.</p>
+      <p class="admin-hint">Pega el link tal cual lo copias del navegador (YouTube, Dailymotion, Vimeo) — se convierte automáticamente al formato de reproductor. Si tu proveedor de video es otro, pega directamente la URL de "embed" que te dé. Puedes dejarlo vacío y completarlo después.</p>
       <label>Miniatura del episodio (URL de imagen)
         <input class="input" type="url" id="ep-thumb" value="${editing ? escapeAttr(editing.thumb || "") : ""}" placeholder="https://ejemplo.com/miniaturas/ep1.jpg">
       </label>
@@ -700,9 +700,11 @@ function handleTrailerSubmit(e) {
   if (!anime) return;
 
   const rawUrl = document.querySelector("#trailer-url").value.trim();
-  const embedUrl = normalizeTrailerUrl(rawUrl);
 
-  updateAnimeTrailer(anime.id, embedUrl);
+  // updateAnimeTrailer() (js/store.js) se encarga de convertir el link
+  // pegado (YouTube, Dailymotion, Vimeo, etc.) al formato de "embed"
+  // que necesita el <iframe>, así que aquí solo lo pasamos tal cual.
+  updateAnimeTrailer(anime.id, rawUrl);
   renderAnimeDetail();
 }
 
@@ -735,44 +737,6 @@ function escapeAttr(str) {
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;");
-}
-
-/* Convierte un link normal de YouTube o Dailymotion (el que copias de la
-   barra de direcciones) en la URL de "embed" que necesita el <iframe>.
-   Si ya es una URL de embed, o es de otro proveedor, se deja tal cual. */
-function normalizeTrailerUrl(rawUrl) {
-  const url = (rawUrl || "").trim();
-  if (!url) return "";
-
-  try {
-    const u = new URL(url);
-    const host = u.hostname.replace(/^www\./, "");
-
-    if (host === "youtu.be") {
-      const id = u.pathname.slice(1);
-      if (id) return `https://www.youtube.com/embed/${id}`;
-    }
-    if (host === "youtube.com" || host === "m.youtube.com") {
-      if (u.pathname === "/watch" && u.searchParams.get("v")) {
-        return `https://www.youtube.com/embed/${u.searchParams.get("v")}`;
-      }
-      if (u.pathname.startsWith("/embed/")) return url; // ya es un embed
-      if (u.pathname.startsWith("/shorts/")) {
-        const id = u.pathname.split("/")[2];
-        if (id) return `https://www.youtube.com/embed/${id}`;
-      }
-    }
-    if (host === "dailymotion.com") {
-      if (u.pathname.startsWith("/embed/")) return url; // ya es un embed
-      const match = u.pathname.match(/\/video\/([^_/]+)/);
-      if (match) return `https://www.dailymotion.com/embed/video/${match[1]}`;
-    }
-  } catch (err) {
-    // URL inválida: la dejamos tal cual, el navegador simplemente no
-    // podrá cargarla en el <iframe> y se mostrará el estado "sin tráiler".
-  }
-
-  return url;
 }
 
 /* ============================================================

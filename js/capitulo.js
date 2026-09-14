@@ -54,13 +54,21 @@ function renderChapter() {
 function renderPlayer(anime, episode) {
   const wrap = document.querySelector("#player-wrap");
   if (episode.embedUrl) {
+    // OJO: antes este <iframe> forzaba referrerpolicy="no-referrer". La
+    // mayoría de los sitios de video no le dan importancia, pero YouTube
+    // sí: necesita recibir el origen/referrer de la página para
+    // autorizar la reproducción embebida, y sin él responde con el
+    // "Error 153" ("video player configuration error") en vez de
+    // reproducir el video. Al quitar el atributo, el navegador usa su
+    // política de referrer por defecto (strict-origin-when-cross-origin),
+    // que sí manda esa información y funciona igual de bien con
+    // cualquier otro proveedor de video.
     wrap.innerHTML = `
       <iframe
         src="${episode.embedUrl}"
         title="Reproductor de ${anime.title} — Episodio ${episode.number}"
-        allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
         allowfullscreen
-        referrerpolicy="no-referrer"
         loading="lazy"></iframe>
     `;
   } else {

@@ -193,3 +193,76 @@ SEED_ANIME_LIST.forEach(a => {
   a.anilistId = null;
   a.trailerEmbedUrl = null; // los animes de la semilla son ficticios y no tienen tráiler real
 });
+
+/* ============================================================
+   Normalización de links de video (tráiler y capítulos)
+   ------------------------------------------------------------
+   Convierte el link "normal" que se copia de la barra de
+   direcciones (el que ve cualquier persona al ver el video en el
+   sitio original) en la URL de "embed" que necesita un <iframe>.
+   La usa js/store.js, tanto al guardar (panel de administración)
+   como al leer (por si algún registro quedó con un link viejo sin
+   convertir, editado a mano en Firestore, etc.), así que sea cual
+   sea el sitio donde se pegue el link, termina funcionando.
+
+   - YouTube: watch?v=, youtu.be/, /shorts/, /live/ y hasta los
+     links de /embed/ ya armados se pasan siempre por el dominio
+     "youtube-nocookie.com". Además de subir menos cookies, ese
+     dominio evita el "Error 153" (error de configuración del
+     reproductor) que YouTube devuelve cuando no recibe un origen/
+     referrer válido para autorizar la reproducción embebida.
+   - Dailymotion (dailymotion.com y el acortador dai.ly) y Vimeo:
+     incluyen su propia conversión a formato "embed".
+   - Cualquier otro sitio (streaming embebible, etc.) se deja tal
+     cual: la mayoría ya entrega directamente una URL pensada para
+     usarse en un <iframe>.
+   ============================================================ */
+function normalizeEmbedUrl(rawUrl) {
+  const url = (rawUrl || "").trim();
+  if (!url) return "";
+
+  let u;
+  try {
+    u = new URL(url);
+  } catch (err) {
+    // URL inválida: la dejamos tal cual. El <iframe> simplemente no
+    // podrá cargarla y se mostrará el estado "sin video".
+    return url;
+  }
+
+  const host = u.hostname.replace(/^www\./, "").replace(/^m\./, "");
+
+  if (host === "youtube.com" || host === "youtube-nocookie.com") {
+    if (u.pathname === "/watch" && u.searchParams.get("v")) {
+      return `https://www.youtube-nocookie.com/embed/${u.searchParams.get("v")}`;
+    }
+    if (u.pathname.startsWith("/shorts/") || u.pathname.startsWith("/live/")) {
+      const id = u.pathname.split("/")[2];
+      if (id) return `https://www.youtube-nocookie.com/embed/${id}`;
+    }
+    if (u.pathname.startsWith("/embed/")) {
+      return `https://www.youtube-nocookie.com${u.pathname}${u.search}`;
+    }
+  }
+  if (host === "youtu.be") {
+    const id = u.pathname.slice(1);
+    if (id) return `https://www.youtube-nocookie.com/embed/${id}`;
+  }
+
+  if (host === "dailymotion.com") {
+    if (u.pathname.startsWith("/embed/")) return url; // ya es un embed
+    const match = u.pathname.match(/\/video\/([^_/]+)/);
+    if (match) return `https://www.dailymotion.com/embed/video/${match[1]}`;
+  }
+  if (host === "dai.ly") {
+    const id = u.pathname.slice(1);
+    if (id) return `https://www.dailymotion.com/embed/video/${id}`;
+  }
+
+  if (host === "vimeo.com") {
+    const match = u.pathname.match(/^\/(\d+)/);
+    if (match) return `https://player.vimeo.com/video/${match[1]}`;
+  }
+
+  return url;
+}

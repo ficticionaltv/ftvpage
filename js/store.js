@@ -61,7 +61,7 @@ function normalizeAnimeRecord(a) {
     recent: !!a.recent,
     cover: a.cover || coverUrl(id),
     banner: a.banner || a.cover || bannerUrl(id),
-    trailerEmbedUrl: a.trailerEmbedUrl || null,
+    trailerEmbedUrl: a.trailerEmbedUrl ? normalizeEmbedUrl(a.trailerEmbedUrl) : null,
     audio: a.audio || null,
     cast: a.cast || null,
     logo: a.logo || null,
@@ -95,7 +95,7 @@ function normalizeEpisodeRecord(animeId, ep) {
     title: ep.title && String(ep.title).trim() ? ep.title : `Episodio ${number}`,
     thumb: ep.thumb || epThumbUrl(animeId, number),
     duration: ep.duration && String(ep.duration).trim() ? ep.duration : "23 min",
-    embedUrl: ep.embedUrl || null
+    embedUrl: ep.embedUrl ? normalizeEmbedUrl(ep.embedUrl) : null
   };
 }
 
@@ -256,7 +256,7 @@ function addAnimeToLibrary(anime) {
     recent: true,
     cover: anime.cover || coverUrl(id),
     banner: anime.banner || anime.cover || bannerUrl(id),
-    trailerEmbedUrl: anime.trailerEmbedUrl || null,
+    trailerEmbedUrl: anime.trailerEmbedUrl ? normalizeEmbedUrl(anime.trailerEmbedUrl) : null,
     audio: anime.audio || null,
     cast: anime.cast || null,
     logo: anime.logo || null,
@@ -281,7 +281,7 @@ function removeAnimeFromLibrary(id) {
 function updateAnimeTrailer(animeId, trailerEmbedUrl) {
   const anime = getAnimeById(animeId);
   if (!anime) return null;
-  anime.trailerEmbedUrl = trailerEmbedUrl && trailerEmbedUrl.trim() ? trailerEmbedUrl.trim() : null;
+  anime.trailerEmbedUrl = trailerEmbedUrl && trailerEmbedUrl.trim() ? normalizeEmbedUrl(trailerEmbedUrl.trim()) : null;
   persist();
   return anime;
 }
@@ -345,7 +345,7 @@ function addEpisodeToAnime(animeId, episode) {
     title: episode.title && episode.title.trim() ? episode.title.trim() : `Episodio ${number}`,
     thumb: episode.thumb || epThumbUrl(anime.id, number),
     duration: episode.duration && episode.duration.trim() ? episode.duration.trim() : "23 min",
-    embedUrl: episode.embedUrl || null
+    embedUrl: episode.embedUrl ? normalizeEmbedUrl(episode.embedUrl) : null
   };
 
   anime.episodes = anime.episodes.filter(e => e.number !== number);
@@ -363,7 +363,7 @@ function updateEpisode(animeId, number, patch) {
   if (!ep) return null;
   if (patch.title && patch.title.trim()) ep.title = patch.title.trim();
   if (patch.duration && patch.duration.trim()) ep.duration = patch.duration.trim();
-  ep.embedUrl = patch.embedUrl || null;
+  ep.embedUrl = patch.embedUrl ? normalizeEmbedUrl(patch.embedUrl) : null;
   ep.thumb = (patch.thumb && patch.thumb.trim()) ? patch.thumb.trim() : epThumbUrl(anime.id, ep.number);
   persist();
   return ep;
