@@ -298,6 +298,16 @@ button { font-family: inherit; }
    están abiertos a pantalla completa. */
 body.nav-lock-scroll { overflow: hidden; }
 
+/* El "backdrop-filter" del header crea, sin querer, un nuevo bloque
+   contenedor para cualquier descendiente con position:fixed (misma
+   regla que aplica "transform" o "filter"). Eso hacía que el menú y
+   el buscador móviles —que son fixed y deberían cubrir la pantalla
+   completa— quedaran encerrados dentro de la caja del header (76px
+   de alto) en vez de ocupar todo el viewport. Al desactivar el
+   desenfoque mientras cualquiera de los dos está abierto, vuelven a
+   posicionarse respecto a la ventana, como corresponde.  */
+body.nav-lock-scroll .site-header { backdrop-filter: none; }
+
 /* ---------------------------------------------------------------------- */
 /* Hero / Slider                                                          */
 /* ---------------------------------------------------------------------- */
