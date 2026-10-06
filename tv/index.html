@@ -9,8 +9,25 @@
 <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/tv.css">
 <link rel="icon" href="../img/favicon.png">
+<style>
+/* Intro de entrada (vive en el HTML para verse antes de que cargue el resto) */
+#intro{position:fixed;inset:0;z-index:99999;background:#0e0e12;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .6s ease}
+#intro.out{opacity:0;pointer-events:none}
+#intro .lg{font:700 140px/1 Rajdhani,Inter,sans-serif;color:#f4f4f8;letter-spacing:6px;opacity:0;transform:scale(.8);animation:ftvIn .9s cubic-bezier(.2,.8,.2,1) .15s forwards}
+#intro .lg b{color:#ff1111}
+#intro .bar{width:320px;height:4px;background:#2a2a36;border-radius:2px;margin-top:40px;overflow:hidden;opacity:0;animation:ftvFade .4s ease .8s forwards}
+#intro .bar i{display:block;height:100%;width:40%;background:#ff1111;border-radius:2px;animation:ftvBar 1.1s ease-in-out infinite}
+#intro video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;display:none}
+#intro.vid video{display:block}
+#intro.vid .lg,#intro.vid .bar{display:none}
+@keyframes ftvIn{to{opacity:1;transform:scale(1)}}
+@keyframes ftvFade{to{opacity:1}}
+@keyframes ftvBar{0%{transform:translateX(-100%)}100%{transform:translateX(260%)}}
+</style>
 </head>
 <body>
+
+<div id="intro"><video id="introVid" playsinline preload="auto"></video><div class="lg">F<b>TV</b></div><div class="bar"><i></i></div></div>
 
 <div id="app" class="app">
   <!-- Barra lateral de navegación (se expande al enfocarla) -->
@@ -34,5 +51,35 @@
 <script src="../js/data.js"></script>
 <script src="../js/store.js"></script>
 <script src="js/tv.js"></script>
+<script>
+/* Intro: si existe tv/intro.mp4 lo reproduce; si no, queda la animacion de logo.
+   Se quita al terminar el video (o a los 2.4 s en modo animacion) y cuando la pagina ya cargo. */
+(function(){
+  var VIDEO_SRC="intro.mp4";   /* ruta relativa a tv/index.html */
+  var MIN=2400, MAX_VIDEO=25000;
+  var el=document.getElementById("intro"), v=document.getElementById("introVid");
+  var t0=Date.now(), loaded=false, done=false, mode="anim", gone=false;
+  function hide(){ if(gone) return; gone=true; try{v.pause();}catch(e){} el.classList.add("out"); setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); },700); }
+  function check(){ if(!loaded||!done||gone) return; if(mode==="anim"){ var w=MIN-(Date.now()-t0); if(w>0){ setTimeout(hide,w); return; } } hide(); }
+  window.addEventListener("load",function(){ loaded=true; check(); });
+  if(mode==="anim") done=true;
+
+  /* video */
+  function useAnim(){ mode="anim"; el.classList.remove("vid"); done=true; check(); }
+  v.addEventListener("error",useAnim);
+  v.addEventListener("ended",function(){ done=true; check(); });
+  v.addEventListener("playing",function(){ mode="video"; done=false; el.classList.add("vid"); },{once:true});
+  v.src=VIDEO_SRC;
+  var pr=v.play();
+  if(pr&&pr.catch) pr.catch(function(){ v.muted=true; var p2=v.play(); if(p2&&p2.catch) p2.catch(useAnim); });
+
+  setTimeout(hide,MAX_VIDEO);   /* seguro: nunca se queda trabado */
+  /* el mando no mueve la app mientras se ve; tras 1 s cualquier tecla lo salta */
+  document.addEventListener("keydown",function(e){
+    if(gone) return; e.stopPropagation(); e.preventDefault();
+    if(Date.now()-t0>1000){ done=true; if(loaded) hide(); else { mode="anim"; check(); } }
+  },true);
+})();
+</script>
 </body>
 </html>
