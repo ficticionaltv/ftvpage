@@ -746,6 +746,7 @@
   }
 
   function exitApp() {
+    try { if (window.AndroidTV) { AndroidTV.exit(); return; } } catch (e) {}
     try { if (window.tizen && tizen.application) { tizen.application.getCurrentApplication().exit(); return; } } catch (e) {}
     try { if (window.webOS && webOS.platformBack) { webOS.platformBack(); return; } } catch (e) {}
     if (state.navCount > 1) history.back();
