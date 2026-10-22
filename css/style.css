@@ -1383,3 +1383,52 @@ body.nav-lock-scroll .site-header { backdrop-filter: none; }
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   }
 }
+
+
+/* ---------------------------------------------------------------------- */
+/* Selector de temporadas (ficha de anime)                                */
+/* En PC va debajo de la portada; en móviles, justo antes del tráiler.    */
+/* ---------------------------------------------------------------------- */
+.season-picker { margin-top: 16px; }
+.season-picker[hidden] { display: none !important; }
+.season-picker-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-faint);
+  font-weight: 700;
+  font-size: .74rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.season-select-wrap { position: relative; }
+.season-select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 11px 38px 11px 14px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+.season-select:hover { border-color: var(--text-faint); }
+.season-select:focus { border-color: var(--gold); outline: none; }
+.season-select option { background: var(--surface); color: var(--text); }
+.season-select-arrow {
+  position: absolute;
+  right: 14px; top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--text-muted);
+}
+
+/* Solo uno de los dos selectores es visible según el ancho de pantalla. */
+.season-picker--mobile { display: none; }
+@media (max-width: 720px) {
+  .season-picker--desktop { display: none; }
+  .season-picker--mobile { display: block; margin: 0 0 14px; }
+}
