@@ -28,6 +28,7 @@ const ADMIN_EMAILS = [
 let lastSearchResults = [];
 let selectedAnimeId = null;
 let editingEpisodeNumber = null;
+let selectedSeasonNumber = null; // temporada que se está gestionando en el panel (null = la primera)
 
 /* ------------------------------------------------------------
    Estado de conexión con Firebase (independiente del gate de acceso,
@@ -400,6 +401,7 @@ function openAddEditor(item) {
     const record = addAnimeToLibrary(edited);
     container.innerHTML = "";
     selectedAnimeId = record.id;
+    selectedSeasonNumber = null;
     editingEpisodeNumber = null;
     renderAnimeList();
     renderAnimeDetail();
@@ -444,7 +446,7 @@ function renderAnimeList() {
       <img src="${a.cover}" alt="">
       <span>
         <strong>${a.title}</strong>
-        <small>${a.episodes.length} capítulo${a.episodes.length === 1 ? "" : "s"} · ${a.source === "anilist" ? "AniList" : "Semilla"}</small>
+        <small>${a.seasons.length > 1 ? `${a.seasons.length} temporadas · ` : ""}${a.episodesCount} capítulo${a.episodesCount === 1 ? "" : "s"} · ${a.source === "anilist" ? "AniList" : "Semilla"}</small>
       </span>
     </button>
   `).join("");
@@ -452,6 +454,7 @@ function renderAnimeList() {
   listEl.querySelectorAll("[data-select]").forEach(btn => {
     btn.addEventListener("click", () => {
       selectedAnimeId = btn.dataset.select;
+      selectedSeasonNumber = null;
       editingEpisodeNumber = null;
       renderAnimeList();
       renderAnimeDetail();
@@ -471,7 +474,10 @@ function renderAnimeDetail() {
     return;
   }
 
-  const episodes = [...anime.episodes].sort((a, b) => a.number - b.number);
+  const season = getSeason(anime, selectedSeasonNumber);
+  selectedSeasonNumber = season.number;
+  const seasonName = seasonLabel(season);
+  const episodes = [...season.episodes].sort((a, b) => a.number - b.number);
   const editing = editingEpisodeNumber !== null ? episodes.find(e => e.number === editingEpisodeNumber) : null;
   const nextNumber = episodes.length ? Math.max(...episodes.map(e => e.number)) + 1 : 1;
 
@@ -482,13 +488,50 @@ function renderAnimeDetail() {
         <h3>${anime.title}</h3>
         <p class="anilist-card-meta">${anime.year} · ${anime.studio} · ★ ${anime.rating.toFixed(1)}</p>
         <div class="hero-genres">${anime.genres.map(g => `<span class="tag">${g}</span>`).join("")}</div>
-        <p class="pill ${anime.trailerEmbedUrl ? "pill-ok" : "pill-warn"}">${anime.trailerEmbedUrl ? "Con tráiler" : "Sin tráiler"}</p>
+        <p class="pill ${season.trailerEmbedUrl ? "pill-ok" : "pill-warn"}">${season.trailerEmbedUrl ? "Con tráiler" : "Sin tráiler"} (${escapeAttr(seasonLabel(season, { withTitle: false }))})</p>
         <div class="admin-anime-actions">
-          <a class="btn btn-ghost btn-sm" href="anime.html?id=${anime.id}" target="_blank" rel="noopener">Ver ficha</a>
+          <a class="btn btn-ghost btn-sm" href="anime.html?id=${anime.id}&season=${season.number}" target="_blank" rel="noopener">Ver ficha</a>
           <button class="btn btn-ghost btn-sm" id="delete-anime-btn" type="button">Eliminar anime</button>
         </div>
       </div>
     </div>
+
+    <h4 class="admin-subhead">Temporadas (${anime.seasons.length})</h4>
+    <p class="admin-hint">Cada temporada tiene su propio tráiler y su propia lista de capítulos (los números de episodio empiezan en 1 en cada una). En la ficha del anime aparece un menú desplegable para elegir la temporada cuando hay más de una. Todo lo de abajo — tráiler y capítulos — se aplica a la temporada seleccionada aquí.</p>
+    <div class="admin-episode-form">
+      <label>Temporada que estás editando
+        <select class="input" id="season-select-admin">
+          ${anime.seasons.map(s => `<option value="${s.number}" ${s.number === season.number ? "selected" : ""}>${escapeAttr(seasonLabel(s))} — ${s.episodes.length} capítulo${s.episodes.length === 1 ? "" : "s"}</option>`).join("")}
+        </select>
+      </label>
+    </div>
+
+    <form class="admin-episode-form" id="season-edit-form">
+      <label>Nombre de ${escapeAttr(seasonLabel(season, { withTitle: false }))} (opcional)
+        <input class="input" type="text" id="season-title-input" value="${escapeAttr(season.title || "")}" placeholder="Ej. El torneo, Arco final…">
+      </label>
+      <div class="admin-anime-actions">
+        <button class="btn btn-primary btn-sm" type="submit">Guardar nombre</button>
+        <button class="btn btn-ghost btn-sm" type="button" id="delete-season-btn" ${anime.seasons.length <= 1 ? "disabled title=\"Debe quedar al menos una temporada\"" : ""}>Eliminar esta temporada</button>
+      </div>
+    </form>
+
+    <form class="admin-episode-form" id="season-add-form">
+      <div class="form-row">
+        <label>N.º de nueva temporada
+          <input class="input" type="number" min="1" id="new-season-number" value="${nextSeasonNumber(anime)}" required>
+        </label>
+        <label>Nombre (opcional)
+          <input class="input" type="text" id="new-season-title" placeholder="Ej. Segunda temporada">
+        </label>
+      </div>
+      <label>URL del tráiler de la nueva temporada (opcional)
+        <input class="input" type="url" id="new-season-trailer" placeholder="https://www.youtube.com/watch?v=xxxxxxxx">
+      </label>
+      <div class="admin-anime-actions">
+        <button class="btn btn-primary btn-sm" type="submit">Agregar temporada</button>
+      </div>
+    </form>
 
     <h4 class="admin-subhead">Imagen de fondo</h4>
     <p class="admin-hint">Esta es la imagen ancha que se usa como fondo en el slider de inicio y arriba de la ficha del anime. Trae la que encontró AniList por defecto, pero puedes pegar otro link si no te convence.</p>
@@ -520,10 +563,10 @@ function renderAnimeDetail() {
       </div>
     </form>
 
-    <h4 class="admin-subhead">Tráiler</h4>
+    <h4 class="admin-subhead">Tráiler — ${escapeAttr(seasonName)}</h4>
     <form class="admin-episode-form" id="trailer-form">
-      <label>URL del tráiler (link normal de YouTube/Dailymotion/Vimeo, o una URL de embed)
-        <input class="input" type="url" id="trailer-url" value="${escapeAttr(anime.trailerEmbedUrl || "")}" placeholder="https://www.youtube.com/watch?v=xxxxxxxx">
+      <label>URL del tráiler de esta temporada (link normal de YouTube/Dailymotion/Vimeo, o una URL de embed)
+        <input class="input" type="url" id="trailer-url" value="${escapeAttr(season.trailerEmbedUrl || "")}" placeholder="https://www.youtube.com/watch?v=xxxxxxxx">
       </label>
       <p class="admin-hint">Pega el link tal cual lo copias del navegador (YouTube, Dailymotion, Vimeo) — se convierte automáticamente al formato de reproductor. Déjalo vacío y guarda para quitar el tráiler.</p>
       <div class="admin-anime-actions">
@@ -545,7 +588,7 @@ function renderAnimeDetail() {
       </div>
     </form>
 
-    <h4 class="admin-subhead">${editing ? `Editando episodio ${editing.number}` : "Agregar capítulo"}</h4>
+    <h4 class="admin-subhead">${editing ? `Editando episodio ${editing.number}` : "Agregar capítulo"} — ${escapeAttr(seasonName)}</h4>
     <form class="admin-episode-form" id="episode-form">
       <div class="form-row">
         <label>N.º de episodio
@@ -575,7 +618,7 @@ function renderAnimeDetail() {
       </div>
     </form>
 
-    <h4 class="admin-subhead">Capítulos (${episodes.length})</h4>
+    <h4 class="admin-subhead">Capítulos de ${escapeAttr(seasonName)} (${episodes.length})</h4>
     <div class="admin-episode-list" id="admin-episode-list">
       ${episodes.length ? episodes.map(ep => `
         <div class="admin-episode-row">
@@ -585,14 +628,23 @@ function renderAnimeDetail() {
             <span class="pill ${ep.embedUrl ? "pill-ok" : "pill-warn"}">${ep.embedUrl ? "Con reproductor" : "Sin reproductor"}</span>
           </div>
           <div class="admin-episode-actions">
-            <a class="btn btn-ghost btn-sm" href="capitulo.html?id=${anime.id}&ep=${ep.number}" target="_blank" rel="noopener">Ver</a>
+            <a class="btn btn-ghost btn-sm" href="capitulo.html?id=${anime.id}&season=${season.number}&ep=${ep.number}" target="_blank" rel="noopener">Ver</a>
             <button class="btn btn-ghost btn-sm" type="button" data-edit="${ep.number}">Editar</button>
             <button class="btn btn-ghost btn-sm" type="button" data-delete="${ep.number}">Eliminar</button>
           </div>
         </div>
-      `).join("") : `<p class="admin-empty">Todavía no hay capítulos para este anime.</p>`}
+      `).join("") : `<p class="admin-empty">Todavía no hay capítulos en esta temporada.</p>`}
     </div>
   `;
+
+  document.querySelector("#season-select-admin").addEventListener("change", (e) => {
+    selectedSeasonNumber = Number(e.target.value);
+    editingEpisodeNumber = null;
+    renderAnimeDetail();
+  });
+  document.querySelector("#season-edit-form").addEventListener("submit", handleSeasonEditSubmit);
+  document.querySelector("#season-add-form").addEventListener("submit", handleSeasonAddSubmit);
+  document.querySelector("#delete-season-btn").addEventListener("click", handleDeleteSeason);
 
   document.querySelector("#episode-form").addEventListener("submit", handleEpisodeSubmit);
   document.querySelector("#trailer-form").addEventListener("submit", handleTrailerSubmit);
@@ -665,7 +717,7 @@ function renderAnimeDetail() {
     btn.addEventListener("click", () => {
       const number = Number(btn.dataset.delete);
       if (!confirm(`¿Eliminar el episodio ${number}?`)) return;
-      removeEpisode(anime.id, number);
+      removeEpisode(anime.id, number, season.number);
       if (editingEpisodeNumber === number) editingEpisodeNumber = null;
       renderAnimeList();
       renderAnimeDetail();
@@ -684,10 +736,12 @@ function handleEpisodeSubmit(e) {
   const embedUrl = document.querySelector("#ep-embed").value.trim();
   const thumb = document.querySelector("#ep-thumb").value.trim();
 
+  const seasonNumber = getSeason(anime, selectedSeasonNumber).number;
+
   if (editingEpisodeNumber !== null) {
-    updateEpisode(anime.id, editingEpisodeNumber, { title, duration, embedUrl, thumb });
+    updateEpisode(anime.id, editingEpisodeNumber, { title, duration, embedUrl, thumb }, seasonNumber);
   } else {
-    addEpisodeToAnime(anime.id, { number, title, duration, embedUrl, thumb });
+    addEpisodeToAnime(anime.id, { number, title, duration, embedUrl, thumb }, seasonNumber);
   }
 
   editingEpisodeNumber = null;
@@ -705,7 +759,60 @@ function handleTrailerSubmit(e) {
   // updateAnimeTrailer() (js/store.js) se encarga de convertir el link
   // pegado (YouTube, Dailymotion, Vimeo, etc.) al formato de "embed"
   // que necesita el <iframe>, así que aquí solo lo pasamos tal cual.
-  updateAnimeTrailer(anime.id, rawUrl);
+  updateAnimeTrailer(anime.id, rawUrl, getSeason(anime, selectedSeasonNumber).number);
+  renderAnimeDetail();
+}
+
+/* ------------------------------------------------------------
+   Temporadas: editar nombre, agregar y eliminar
+   ------------------------------------------------------------ */
+function handleSeasonEditSubmit(e) {
+  e.preventDefault();
+  const anime = getAnimeById(selectedAnimeId);
+  if (!anime) return;
+  const season = getSeason(anime, selectedSeasonNumber);
+  updateSeason(anime.id, season.number, { title: document.querySelector("#season-title-input").value });
+  renderAnimeList();
+  renderAnimeDetail();
+}
+
+function handleSeasonAddSubmit(e) {
+  e.preventDefault();
+  const anime = getAnimeById(selectedAnimeId);
+  if (!anime) return;
+
+  const number = Number(document.querySelector("#new-season-number").value);
+  const title = document.querySelector("#new-season-title").value.trim();
+  const trailerEmbedUrl = document.querySelector("#new-season-trailer").value.trim();
+
+  if (!Number.isInteger(number) || number < 1) {
+    alert("El número de temporada debe ser un entero mayor o igual a 1.");
+    return;
+  }
+  if (anime.seasons.some(s => s.number === number)) {
+    alert(`La temporada ${number} ya existe. Elige otro número o selecciónala en el menú de arriba para editarla.`);
+    return;
+  }
+
+  const created = addSeasonToAnime(anime.id, { number, title, trailerEmbedUrl });
+  if (!created) return;
+  selectedSeasonNumber = created.number; // pasamos directo a la temporada nueva para cargarle capítulos
+  editingEpisodeNumber = null;
+  renderAnimeList();
+  renderAnimeDetail();
+}
+
+function handleDeleteSeason() {
+  const anime = getAnimeById(selectedAnimeId);
+  if (!anime || anime.seasons.length <= 1) return;
+  const season = getSeason(anime, selectedSeasonNumber);
+  const count = season.episodes.length;
+  if (!confirm(`¿Eliminar la ${seasonLabel(season, { withTitle: false })} de "${anime.title}" con sus ${count} capítulo${count === 1 ? "" : "s"} y su tráiler? Esta acción no se puede deshacer.`)) return;
+
+  removeSeason(anime.id, season.number);
+  selectedSeasonNumber = null;
+  editingEpisodeNumber = null;
+  renderAnimeList();
   renderAnimeDetail();
 }
 
@@ -728,6 +835,7 @@ function handleDeleteAnime(id) {
 
   removeAnimeFromLibrary(id);
   selectedAnimeId = null;
+  selectedSeasonNumber = null;
   editingEpisodeNumber = null;
   renderAnimeList();
   renderAnimeDetail();

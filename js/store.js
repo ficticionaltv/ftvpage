@@ -36,6 +36,29 @@ function cloneSeedLibrary() {
   }));
 }
 
+/* Prepara la lista de animes para guardarla en Firestore. Se guardan las
+   temporadas (`seasons`) como fuente de verdad; además se mantienen
+   `episodes` y `trailerEmbedUrl` como copia de la primera temporada, para
+   que cualquier página antigua (o editada a mano en la consola) siga
+   funcionando. */
+function serializeLibrary(list) {
+  return list.map(a => {
+    const normalized = Array.isArray(a.seasons) ? a : normalizeAnimeRecord(a);
+    const { episodesCount, ...rest } = normalized;
+    return {
+      ...rest,
+      seasons: normalized.seasons.map(s => ({
+        number: s.number,
+        title: s.title || "",
+        trailerEmbedUrl: s.trailerEmbedUrl || null,
+        episodes: s.episodes
+      })),
+      episodes: normalized.seasons[0].episodes,
+      trailerEmbedUrl: normalized.seasons[0].trailerEmbedUrl || null
+    };
+  });
+}
+
 function cloneSeedExtras() {
   return SEED_EXTRAS_LIST.map(x => ({
     ...x,
@@ -55,7 +78,8 @@ function cloneSeedExtras() {
 function normalizeAnimeRecord(a) {
   a = a || {};
   const id = a.id || slugify(a.title || "anime");
-  const episodes = Array.isArray(a.episodes) ? a.episodes.map(ep => normalizeEpisodeRecord(id, ep)) : [];
+  const seasons = normalizeSeasonsOf(id, a);
+  const first = seasons[0];
 
   return {
     ...a,
@@ -70,15 +94,81 @@ function normalizeAnimeRecord(a) {
     recent: !!a.recent,
     cover: a.cover || coverUrl(id),
     banner: a.banner || a.cover || bannerUrl(id),
-    trailerEmbedUrl: a.trailerEmbedUrl ? normalizeEmbedUrl(a.trailerEmbedUrl) : null,
     audio: a.audio || null,
     cast: a.cast || null,
     logo: a.logo || null,
-    episodes,
-    episodesCount: episodes.length,
     source: a.source || "seed",
-    anilistId: a.anilistId != null ? a.anilistId : null
+    anilistId: a.anilistId != null ? a.anilistId : null,
+    seasons,
+    // Campos derivados, por compatibilidad con el resto del sitio (y la
+    // versión TV): `episodes` y `trailerEmbedUrl` apuntan a la PRIMERA
+    // temporada, y `episodesCount` es el total de todas las temporadas.
+    episodes: first.episodes,
+    trailerEmbedUrl: first.trailerEmbedUrl,
+    episodesCount: seasons.reduce((sum, s) => sum + s.episodes.length, 0)
   };
+}
+
+/* ------------------------------------------------------------
+   Temporadas
+   Cada anime tiene un arreglo `seasons`: [{ number, title, trailerEmbedUrl,
+   episodes: [...] }]. Los animes antiguos (guardados antes de que existieran
+   las temporadas) solo traen `episodes` y `trailerEmbedUrl` sueltos: se
+   convierten automáticamente en la "Temporada 1". Siempre hay al menos una
+   temporada.
+   ------------------------------------------------------------ */
+function normalizeSeasonsOf(animeId, a) {
+  let raw = Array.isArray(a.seasons) ? a.seasons.filter(Boolean) : [];
+  if (!raw.length) {
+    raw = [{ number: 1, title: "", trailerEmbedUrl: a.trailerEmbedUrl, episodes: a.episodes }];
+  }
+  const seen = new Set();
+  const seasons = [];
+  raw.forEach((s, i) => {
+    const season = normalizeSeasonRecord(animeId, s, i + 1);
+    if (seen.has(season.number)) return; // número repetido: nos quedamos con la primera
+    seen.add(season.number);
+    seasons.push(season);
+  });
+  seasons.sort((x, y) => x.number - y.number);
+  return seasons;
+}
+
+function normalizeSeasonRecord(animeId, s, fallbackNumber) {
+  s = s || {};
+  const number = Number.isInteger(s.number) && s.number >= 1 ? s.number : fallbackNumber;
+  return {
+    number,
+    title: s.title && String(s.title).trim() ? String(s.title).trim() : "",
+    trailerEmbedUrl: s.trailerEmbedUrl ? normalizeEmbedUrl(s.trailerEmbedUrl) : null,
+    episodes: Array.isArray(s.episodes)
+      ? s.episodes.map(ep => normalizeEpisodeRecord(animeId, ep))
+      : []
+  };
+}
+
+/* Devuelve la temporada pedida; si no existe (o no se indica), la primera. */
+function getSeason(anime, number) {
+  if (!anime || !Array.isArray(anime.seasons) || !anime.seasons.length) return null;
+  const n = Number(number);
+  return anime.seasons.find(s => s.number === n) || anime.seasons[0];
+}
+
+/* Texto para mostrar: "Temporada 2" o "Temporada 2 · Nombre". */
+function seasonLabel(season, { withTitle = true } = {}) {
+  if (!season) return "";
+  const base = `Temporada ${season.number}`;
+  return withTitle && season.title ? `${base} · ${season.title}` : base;
+}
+
+/* Recalcula los campos derivados (episodes / trailerEmbedUrl / episodesCount)
+   después de cualquier cambio en las temporadas. */
+function syncAnimeDerived(anime) {
+  anime.seasons.sort((x, y) => x.number - y.number);
+  const first = anime.seasons[0];
+  anime.episodes = first.episodes;
+  anime.trailerEmbedUrl = first.trailerEmbedUrl;
+  anime.episodesCount = anime.seasons.reduce((sum, s) => sum + s.episodes.length, 0);
 }
 
 /* Acota cualquier rating a un número finito entre 0 y 10 (AniList
@@ -155,7 +245,7 @@ function normalizeExtraItemRecord(extraId, kind, item) {
    categorias.js, anime.js, capitulo.js, admin.js) tal como antes lo hacía
    data.js. Arranca con el catálogo semilla como respaldo inmediato
    mientras llega la primera respuesta real de Firestore. */
-let ANIME_LIST = cloneSeedLibrary();
+let ANIME_LIST = cloneSeedLibrary().map(normalizeAnimeRecord);
 let EXTRAS_LIST = cloneSeedExtras();
 let libraryReady = false;
 
@@ -218,7 +308,7 @@ function startLibrarySync() {
   ref.get().then(snap => {
     if (!snap.exists) {
       return ref.set({
-        items: cloneSeedLibrary(),
+        items: serializeLibrary(cloneSeedLibrary()),
         extras: cloneSeedExtras(),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -270,7 +360,7 @@ function onLibraryChange(callback) {
 
 function persist() {
   libraryDocRef().set({
-    items: ANIME_LIST,
+    items: serializeLibrary(ANIME_LIST),
     extras: EXTRAS_LIST,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   }).catch(err => {
@@ -312,14 +402,19 @@ function addAnimeToLibrary(anime) {
     recent: true,
     cover: anime.cover || coverUrl(id),
     banner: anime.banner || anime.cover || bannerUrl(id),
-    trailerEmbedUrl: anime.trailerEmbedUrl ? normalizeEmbedUrl(anime.trailerEmbedUrl) : null,
     audio: anime.audio || null,
     cast: anime.cast || null,
     logo: anime.logo || null,
-    episodes: [],
+    seasons: [{
+      number: 1,
+      title: "",
+      trailerEmbedUrl: anime.trailerEmbedUrl ? normalizeEmbedUrl(anime.trailerEmbedUrl) : null,
+      episodes: []
+    }],
     source: "anilist",
     anilistId: anime.anilistId != null ? anime.anilistId : null
   };
+  syncAnimeDerived(record);
 
   ANIME_LIST.push(record);
   persist();
@@ -331,15 +426,65 @@ function removeAnimeFromLibrary(id) {
   persist();
 }
 
-/* Actualiza el tráiler de un anime (URL de embed, para el <iframe> de la
-   ficha). Se usa desde el panel de administración para poner un tráiler
-   propio, sin depender de lo que traiga AniList. */
-function updateAnimeTrailer(animeId, trailerEmbedUrl) {
+/* Actualiza el tráiler de UNA temporada de un anime (URL de embed, para el
+   <iframe> de la ficha). Si no se indica temporada, se usa la primera. */
+function updateAnimeTrailer(animeId, trailerEmbedUrl, seasonNumber) {
   const anime = getAnimeById(animeId);
   if (!anime) return null;
-  anime.trailerEmbedUrl = trailerEmbedUrl && trailerEmbedUrl.trim() ? normalizeEmbedUrl(trailerEmbedUrl.trim()) : null;
+  const season = getSeason(anime, seasonNumber);
+  season.trailerEmbedUrl = trailerEmbedUrl && trailerEmbedUrl.trim() ? normalizeEmbedUrl(trailerEmbedUrl.trim()) : null;
+  syncAnimeDerived(anime);
   persist();
   return anime;
+}
+
+/* ------------------------------------------------------------
+   Temporadas — CRUD
+   ------------------------------------------------------------ */
+function nextSeasonNumber(anime) {
+  return anime.seasons.length ? Math.max(...anime.seasons.map(s => s.number)) + 1 : 1;
+}
+
+/* Agrega una temporada nueva (vacía). Si el número ya existe, no hace nada
+   y devuelve null. */
+function addSeasonToAnime(animeId, { number, title, trailerEmbedUrl } = {}) {
+  const anime = getAnimeById(animeId);
+  if (!anime) return null;
+  const n = Number.isInteger(number) && number >= 1 ? number : nextSeasonNumber(anime);
+  if (anime.seasons.some(s => s.number === n)) return null;
+
+  const season = {
+    number: n,
+    title: title && title.trim() ? title.trim() : "",
+    trailerEmbedUrl: trailerEmbedUrl && trailerEmbedUrl.trim() ? normalizeEmbedUrl(trailerEmbedUrl.trim()) : null,
+    episodes: []
+  };
+  anime.seasons.push(season);
+  syncAnimeDerived(anime);
+  persist();
+  return season;
+}
+
+function updateSeason(animeId, seasonNumber, patch = {}) {
+  const anime = getAnimeById(animeId);
+  if (!anime) return null;
+  const season = anime.seasons.find(s => s.number === seasonNumber);
+  if (!season) return null;
+  if (typeof patch.title === "string") season.title = patch.title.trim();
+  syncAnimeDerived(anime);
+  persist();
+  return season;
+}
+
+/* Elimina una temporada con todos sus capítulos. Siempre debe quedar al
+   menos una, así que la última no se puede borrar. */
+function removeSeason(animeId, seasonNumber) {
+  const anime = getAnimeById(animeId);
+  if (!anime || anime.seasons.length <= 1) return false;
+  anime.seasons = anime.seasons.filter(s => s.number !== seasonNumber);
+  syncAnimeDerived(anime);
+  persist();
+  return true;
 }
 
 /* Actualiza la sección editable de información (audio y reparto) que se
@@ -381,56 +526,67 @@ function updateAnimeLogo(animeId, logoUrl) {
    semilla de data.js. Como ahora el almacenamiento es compartido, esto
    afecta a todo el mundo, no solo a este navegador. */
 function resetLibraryToSeed() {
-  const seeded = cloneSeedLibrary();
+  const seeded = cloneSeedLibrary().map(normalizeAnimeRecord);
   ANIME_LIST = seeded;
   EXTRAS_LIST = cloneSeedExtras();
   persist();
   return seeded;
 }
 
-/* Agrega o reemplaza (por número) un capítulo de un anime. */
-function addEpisodeToAnime(animeId, episode) {
+/* Agrega o reemplaza (por número) un capítulo en una temporada de un anime.
+   Si no se indica temporada, se usa la primera. */
+function addEpisodeToAnime(animeId, episode, seasonNumber) {
   const anime = getAnimeById(animeId);
   if (!anime) return null;
+  const season = getSeason(anime, seasonNumber);
 
   const number = episode.number || (
-    anime.episodes.length ? Math.max(...anime.episodes.map(e => e.number)) + 1 : 1
+    season.episodes.length ? Math.max(...season.episodes.map(e => e.number)) + 1 : 1
   );
 
   const record = {
     number,
     title: episode.title && episode.title.trim() ? episode.title.trim() : `Episodio ${number}`,
-    thumb: episode.thumb || epThumbUrl(anime.id, number),
+    thumb: episode.thumb || epThumbUrl(seasonThumbSeed(anime, season), number),
     duration: episode.duration && episode.duration.trim() ? episode.duration.trim() : "23 min",
     embedUrl: episode.embedUrl ? normalizeEmbedUrl(episode.embedUrl) : null
   };
 
-  anime.episodes = anime.episodes.filter(e => e.number !== number);
-  anime.episodes.push(record);
-  anime.episodes.sort((a, b) => a.number - b.number);
-  anime.episodesCount = anime.episodes.length;
+  season.episodes = season.episodes.filter(e => e.number !== number);
+  season.episodes.push(record);
+  season.episodes.sort((a, b) => a.number - b.number);
+  syncAnimeDerived(anime);
   persist();
   return record;
 }
 
-function updateEpisode(animeId, number, patch) {
+/* La temporada 1 conserva la semilla de miniaturas de siempre (el id del
+   anime); las demás usan una propia para no repetir las mismas imágenes. */
+function seasonThumbSeed(anime, season) {
+  return season.number === anime.seasons[0].number ? anime.id : `${anime.id}-s${season.number}`;
+}
+
+function updateEpisode(animeId, number, patch, seasonNumber) {
   const anime = getAnimeById(animeId);
   if (!anime) return null;
-  const ep = anime.episodes.find(e => e.number === number);
+  const season = getSeason(anime, seasonNumber);
+  const ep = season.episodes.find(e => e.number === number);
   if (!ep) return null;
   if (patch.title && patch.title.trim()) ep.title = patch.title.trim();
   if (patch.duration && patch.duration.trim()) ep.duration = patch.duration.trim();
   ep.embedUrl = patch.embedUrl ? normalizeEmbedUrl(patch.embedUrl) : null;
-  ep.thumb = (patch.thumb && patch.thumb.trim()) ? patch.thumb.trim() : epThumbUrl(anime.id, ep.number);
+  ep.thumb = (patch.thumb && patch.thumb.trim()) ? patch.thumb.trim() : epThumbUrl(seasonThumbSeed(anime, season), ep.number);
+  syncAnimeDerived(anime);
   persist();
   return ep;
 }
 
-function removeEpisode(animeId, number) {
+function removeEpisode(animeId, number, seasonNumber) {
   const anime = getAnimeById(animeId);
   if (!anime) return;
-  anime.episodes = anime.episodes.filter(e => e.number !== number);
-  anime.episodesCount = anime.episodes.length;
+  const season = getSeason(anime, seasonNumber);
+  season.episodes = season.episodes.filter(e => e.number !== number);
+  syncAnimeDerived(anime);
   persist();
 }
 

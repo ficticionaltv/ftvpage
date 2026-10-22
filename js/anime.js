@@ -9,11 +9,25 @@ document.addEventListener("DOMContentLoaded", () => {
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
 
+  // Temporada elegida. Se lee de ?season=N (así un enlace compartido abre
+  // directamente esa temporada) y se actualiza en la URL al cambiarla.
+  let selectedSeasonNumber = Number(params.get("season")) || null;
+
   function render() {
     const anime = getAnimeById(id) || ANIME_LIST[0];
-    renderDetail(anime);
-    renderTrailer(anime);
-    renderEpisodes(anime);
+    const season = getSeason(anime, selectedSeasonNumber);
+    selectedSeasonNumber = season.number;
+
+    renderDetail(anime, season);
+    renderSeasonPicker(anime, season, (number) => {
+      selectedSeasonNumber = number;
+      const url = new URL(window.location.href);
+      url.searchParams.set("season", number);
+      history.replaceState(null, "", url);
+      render();
+    });
+    renderTrailer(anime, season);
+    renderEpisodes(anime, season);
   }
 
   // ANIME_LIST llega de forma asíncrona desde Firestore, y puede volver
@@ -26,7 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
   onLibraryChange(render);
 });
 
-function renderDetail(anime) {
+function renderDetail(anime, season) {
   document.title = `${anime.title} — FicticionalTV`;
 
   document.querySelector("#detail-banner").style.backgroundImage = `url('${anime.banner}')`;
@@ -59,7 +73,8 @@ function renderDetail(anime) {
     <span class="sep">|</span>
     <span>${anime.studio}</span>
     <span class="sep">|</span>
-    <span>${anime.episodes.length} episodio${anime.episodes.length === 1 ? "" : "s"}</span>
+    <span>${season.episodes.length} episodio${season.episodes.length === 1 ? "" : "s"}</span>
+    ${anime.seasons.length > 1 ? `<span class="sep">|</span><span>${anime.seasons.length} temporadas</span>` : ""}
   `;
 
   renderExtraInfo(anime);
@@ -80,18 +95,48 @@ function renderExtraInfo(anime) {
   if (studioEl) studioEl.textContent = anime.studio && anime.studio.trim() ? anime.studio.trim() : "—";
 }
 
-function renderTrailer(anime) {
+/* Menú desplegable de temporadas. Hay dos contenedores (uno bajo la portada,
+   visible en PC, y otro antes del tráiler, visible en móviles); el CSS
+   muestra solo el que corresponde. Con una sola temporada no se muestra. */
+function renderSeasonPicker(anime, season, onChange) {
+  const hosts = document.querySelectorAll(".season-picker");
+  const multiple = anime.seasons.length > 1;
+
+  hosts.forEach((host, i) => {
+    host.hidden = !multiple;
+    if (!multiple) { host.innerHTML = ""; return; }
+
+    const selectId = `season-select-${i}`;
+    host.innerHTML = `
+      <label class="season-picker-label" for="${selectId}">Temporada</label>
+      <div class="season-select-wrap">
+        <select class="season-select" id="${selectId}" aria-label="Seleccionar temporada">
+          ${anime.seasons.map(s => `
+            <option value="${s.number}" ${s.number === season.number ? "selected" : ""}>${escapeHtml(seasonLabel(s))}</option>
+          `).join("")}
+        </select>
+        <svg class="season-select-arrow" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6l4.5 4.5L12.5 6"/></svg>
+      </div>
+    `;
+    host.querySelector("select").addEventListener("change", (e) => onChange(Number(e.target.value)));
+  });
+}
+
+function renderTrailer(anime, season) {
   const container = document.querySelector("#trailer-container");
   if (!container) return;
 
-  if (anime.trailerEmbedUrl) {
+  const heading = document.querySelector("#trailer-heading");
+  if (heading) heading.textContent = anime.seasons.length > 1 ? `Tráiler · Temporada ${season.number}` : "Tráiler";
+
+  if (season.trailerEmbedUrl) {
     container.innerHTML = `
       <div class="trailer-frame">
-        <iframe src="${anime.trailerEmbedUrl}" title="Tráiler de ${escapeHtml(anime.title)}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <iframe src="${season.trailerEmbedUrl}" title="Tráiler de ${escapeHtml(anime.title)}${anime.seasons.length > 1 ? ` — Temporada ${season.number}` : ""}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
       </div>
     `;
   } else {
-    container.innerHTML = `<div class="trailer-empty">Todavía no hay tráiler disponible para este anime.</div>`;
+    container.innerHTML = `<div class="trailer-empty">Todavía no hay tráiler disponible para ${anime.seasons.length > 1 ? "esta temporada" : "este anime"}.</div>`;
   }
 }
 
@@ -130,17 +175,17 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-function renderEpisodes(anime) {
+function renderEpisodes(anime, season) {
   const grid = document.querySelector("#episodes-grid");
-  const episodes = [...anime.episodes].sort((a, b) => a.number - b.number);
+  const episodes = [...season.episodes].sort((a, b) => a.number - b.number);
 
   if (!episodes.length) {
-    grid.innerHTML = `<p>Todavía no hay capítulos cargados para este anime. Agrégalos desde el <a href="admin.html?id=${anime.id}">panel de administración</a>.</p>`;
+    grid.innerHTML = `<p>Todavía no hay capítulos cargados para ${anime.seasons.length > 1 ? "esta temporada" : "este anime"}. Agrégalos desde el <a href="admin.html?id=${anime.id}">panel de administración</a>.</p>`;
     return;
   }
 
   grid.innerHTML = episodes.map(ep => `
-    <a class="episode-card" href="capitulo.html?id=${anime.id}&ep=${ep.number}">
+    <a class="episode-card" href="capitulo.html?id=${anime.id}&season=${season.number}&ep=${ep.number}">
       <div class="episode-thumb">
         <img src="${ep.thumb}" alt="Miniatura del episodio ${ep.number}" loading="lazy">
         <span class="ep-num">EP ${ep.number}</span>

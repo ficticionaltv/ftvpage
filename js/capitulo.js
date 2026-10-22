@@ -2,7 +2,8 @@
    FicticionalTV — Página de capítulo (reproductor + navegación)
    Esta misma página sirve dos tipos de contenido, distinguidos por
    los parámetros de la URL:
-   - Episodio de anime:      capitulo.html?id=<animeId>&ep=<numero>
+   - Episodio de anime:      capitulo.html?id=<animeId>&season=<temporada>&ep=<numero>
+                             (si falta &season se usa la primera temporada)
    - Ítem de un extra:       capitulo.html?extra=<extraId>&type=audio|video&num=<numero>
    El reproductor, la barra lateral y el resto de la interfaz son
    exactamente los mismos en ambos casos; solo cambia de dónde se
@@ -23,6 +24,7 @@ function getChapterParams() {
   const params = new URLSearchParams(window.location.search);
   return {
     id: params.get("id"),
+    season: Number(params.get("season")) || null,
     ep: Number(params.get("ep")) || 1,
     extraId: params.get("extra"),
     type: params.get("type") === "video" ? "video" : "audio",
@@ -31,23 +33,31 @@ function getChapterParams() {
 }
 
 function renderChapter() {
-  const { id, ep, extraId, type, num } = getChapterParams();
+  const { id, season, ep, extraId, type, num } = getChapterParams();
   if (extraId) {
     renderExtraChapter(extraId, type, num);
   } else {
-    renderAnimeChapter(id, ep);
+    renderAnimeChapter(id, ep, season);
   }
 }
 
 /* ------------------------------------------------------------
    Episodio de anime (comportamiento original)
    ------------------------------------------------------------ */
-function renderAnimeChapter(id, ep) {
+function renderAnimeChapter(id, ep, seasonNumber) {
   const anime = getAnimeById(id) || ANIME_LIST[0];
-  const episodes = [...anime.episodes].sort((a, b) => a.number - b.number);
+  const season = getSeason(anime, seasonNumber);
+  const episodes = [...season.episodes].sort((a, b) => a.number - b.number);
   const episode = episodes.find(e => e.number === ep) || episodes[0];
+  const multiSeason = anime.seasons.length > 1;
+  const isFirstSeason = season.number === anime.seasons[0].number;
+  // La primera temporada conserva la clave de "visto" de siempre, para no
+  // perder el progreso que ya tenía la gente; las demás llevan su propia clave.
+  const watchKey = isFirstSeason ? `anime:${anime.id}` : `anime:${anime.id}:s${season.number}`;
+  const seasonQuery = `season=${season.number}`;
+  const seasonTag = multiSeason ? `T${season.number} ` : "";
 
-  document.querySelector("#chapter-back-link").href = `anime.html?id=${anime.id}`;
+  document.querySelector("#chapter-back-link").href = `anime.html?id=${anime.id}&${seasonQuery}`;
   document.querySelector("#chapter-back-link").textContent = "← Volver a la ficha del anime";
 
   if (!episode) {
@@ -55,37 +65,38 @@ function renderAnimeChapter(id, ep) {
     document.querySelector("#chapter-root").innerHTML = `
       <h1 class="chapter-title" style="margin:28px 0 0;">${anime.title}</h1>
       <div class="empty-state">
-        Este anime todavía no tiene capítulos cargados.<br>
+        ${multiSeason ? "Esta temporada" : "Este anime"} todavía no tiene capítulos cargados.<br>
         <a class="btn btn-primary" style="margin-top:16px;" href="admin.html?id=${anime.id}">Agregar capítulos en el panel</a>
       </div>
     `;
     return;
   }
 
-  document.title = `${anime.title} · Episodio ${episode.number} — FicticionalTV`;
+  const where = multiSeason ? `Temporada ${season.number} · Episodio ${episode.number}` : `Episodio ${episode.number}`;
+  document.title = `${anime.title} · ${where} — FicticionalTV`;
 
   // Marca este episodio como visto en cuanto se abre su reproductor.
-  markWatched(`anime:${anime.id}`, episode.number);
+  markWatched(watchKey, episode.number);
 
   renderPlayer(anime.title, episode);
   renderHeaderInfo({
-    kickerText: anime.title,
-    kickerHref: `anime.html?id=${anime.id}`,
-    titleText: `E${episode.number} - ${episode.title}`,
+    kickerText: multiSeason ? `${anime.title} · ${seasonLabel(season)}` : anime.title,
+    kickerHref: `anime.html?id=${anime.id}&${seasonQuery}`,
+    titleText: `${seasonTag}E${episode.number} - ${episode.title}`,
     durationText: episode.embedUrl ? episode.duration : "Sin video",
     audioText: audioLabel(anime.audio),
     positionText: `Episodio ${episode.number} de ${episodes.length}`
   });
   renderShareButton({
-    url: `${window.location.origin}${window.location.pathname}?id=${anime.id}&ep=${episode.number}`,
-    title: `${anime.title} — Episodio ${episode.number}`,
-    text: `Mira ${anime.title}, Episodio ${episode.number} en FicticionalTV`
+    url: `${window.location.origin}${window.location.pathname}?id=${anime.id}&${seasonQuery}&ep=${episode.number}`,
+    title: `${anime.title} — ${where}`,
+    text: `Mira ${anime.title}, ${where} en FicticionalTV`
   });
   renderSidebar(episodes, episode, (ep) => ({
-    href: `capitulo.html?id=${anime.id}&ep=${ep.number}`,
-    label: `E${ep.number} - ${ep.title}`,
+    href: `capitulo.html?id=${anime.id}&${seasonQuery}&ep=${ep.number}`,
+    label: `${seasonTag}E${ep.number} - ${ep.title}`,
     sub: audioLabel(anime.audio),
-    watchKey: `anime:${anime.id}`
+    watchKey
   }));
 }
 
