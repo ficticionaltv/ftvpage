@@ -42,6 +42,7 @@
     <div class="detail-info">
       <div class="detail-poster-col">
         <img class="detail-poster" id="detail-poster" src="" alt="">
+        <div class="season-picker season-picker--desktop" id="season-picker-desktop" hidden></div>
       </div>
       <div class="detail-main">
         <div class="hero-genres" id="detail-genres"></div>
@@ -77,15 +78,16 @@
 
     <div class="anime-split">
       <section class="trailer-section" id="trailer-section">
+        <div class="season-picker season-picker--mobile" id="season-picker-mobile" hidden></div>
         <div class="section-head">
-          <h2>Tráiler</h2>
+          <h2 id="trailer-heading">Tráiler</h2>
         </div>
         <div id="trailer-container"></div>
       </section>
 
       <section class="section">
         <div class="section-head">
-          <h2>Episodios</h2>
+          <h2 id="episodes-heading">Episodios</h2>
         </div>
         <div class="episodes-scroll">
           <div class="episodes-grid" id="episodes-grid"></div>
