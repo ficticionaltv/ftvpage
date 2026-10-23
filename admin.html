@@ -81,7 +81,7 @@
 
     <section class="admin-section">
       <div class="section-head">
-        <h2>Agregar anime desde AniList API</h2>
+        <h2>Agregar anime (AniList API o manual)</h2>
         <div class="anilist-status-check">
           <span class="pill pill-warn" id="anilist-ping-pill">Comprobando…</span>
           <button class="btn btn-ghost btn-sm" id="anilist-ping-btn" type="button">Comprobar conexión</button>
@@ -95,6 +95,10 @@
         <button class="btn btn-primary btn-sm" type="submit">Buscar</button>
       </form>
       <p class="admin-hint" id="anilist-status"></p>
+      <div class="admin-anime-actions">
+        <button class="btn btn-ghost btn-sm" id="manual-add-btn" type="button">+ Agregar anime manualmente (sin AniList)</button>
+      </div>
+      <p class="admin-hint">¿No está en AniList o prefieres llenar los datos tú mismo? Usa el botón de arriba para crear un anime desde cero, igual que se agrega un extra.</p>
       <div class="anilist-results" id="anilist-results"></div>
       <div id="anilist-edit-container"></div>
     </section>

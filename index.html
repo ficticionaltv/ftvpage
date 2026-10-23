@@ -119,11 +119,14 @@
 <script src="js/main.js"></script>
 <script>
   function renderHomeRails() {
-    const recent = ANIME_LIST.filter(a => a.recent);
+    // Solo se muestran animes con episodios; los que no tienen ninguno
+    // aparecen únicamente en "Próximamente".
+    const visible = getVisibleAnimes();
+    const recent = visible.filter(a => a.recent);
     document.getElementById("rail-recent").innerHTML =
       recent.map(a => safeRender(() => cardTemplate(a, { badge: "Destacado" }), a)).join("");
 
-    const top = [...ANIME_LIST].sort((a, b) => a.popularityRank - b.popularityRank).slice(0, 10);
+    const top = [...visible].sort((a, b) => a.popularityRank - b.popularityRank).slice(0, 10);
     document.getElementById("rail-top").innerHTML =
       top.map((a, i) => safeRender(() => `
         <div class="rank-card">
@@ -133,7 +136,7 @@
       `, a)).join("");
 
     // Próximamente: animes que todavía no tienen ningún capítulo cargado.
-    const upcoming = ANIME_LIST.filter(a => !a.episodes || a.episodes.length === 0);
+    const upcoming = getUpcomingAnimes();
     const upcomingSection = document.getElementById("section-upcoming");
     if (upcoming.length) {
       upcomingSection.style.display = "";
