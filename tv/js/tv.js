@@ -107,13 +107,19 @@
   };
 
   /* --------------------------------------------- datos (misma fuente web) */
-  function animes() {
+  // Todos los animes (incluye los que aún no tienen episodios).
+  function allAnimes() {
     return ANIME_LIST.map(function (a) { return a && a.cover ? a : normalizeAnimeRecord(a); });
+  }
+  // Solo los que tienen al menos un episodio: es lo que se muestra en todo
+  // el sitio, salvo en la fila "Próximamente".
+  function animes() {
+    return allAnimes().filter(animeHasEpisodes);
   }
   function extrasList() {
     return EXTRAS_LIST.map(function (x) { return x && x.cover ? x : normalizeExtraRecord(x); });
   }
-  function findAnime(id) { return animes().filter(function (a) { return a.id === id; })[0]; }
+  function findAnime(id) { return allAnimes().filter(function (a) { return a.id === id; })[0]; }
   function findExtra(id) { return extrasList().filter(function (x) { return x.id === id; })[0]; }
   function sortedEps(a) { return (a.episodes || []).slice().sort(function (x, y) { return x.number - y.number; }); }
   function extraItems(x, kind) {
@@ -214,7 +220,7 @@
   /* ---------------------------------------------------------------- Inicio */
   VIEWS.home = { nav: 'home', live: true, view: function () {
     var L = animes(), X = extrasList();
-    if (!L.length && !X.length) return emptyView('Todavía no hay contenido', 'En cuanto se agregue contenido desde el panel de administración aparecerá aquí.', false);
+    if (!L.length && !X.length && !allAnimes().length) return emptyView('Todavía no hay contenido', 'En cuanto se agregue contenido desde el panel de administración aparecerá aquí.', false);
 
     var rows = '', idx = 0;
 
@@ -239,7 +245,7 @@
     var top = L.slice().sort(function (a, b) { return a.popularityRank - b.popularityRank; }).slice(0, 10);
     if (top.length) rows += rowHtml('top', 'Top 10 de la semana', top.map(function (a, i) { return rankCard(a, i + 1, 'top:' + a.id); }).join(''), idx++);
 
-    var upcoming = L.filter(function (a) { return !a.episodes || !a.episodes.length; });
+    var upcoming = allAnimes().filter(function (a) { return !animeHasEpisodes(a); });
     if (upcoming.length) rows += rowHtml('soon', 'Próximamente', upcoming.map(function (a) { return posterCard(a, { badge: 'Próximamente', fk: 'soon:' + a.id }); }).join(''), idx++);
 
     var best = L.slice().sort(function (a, b) { return (b.rating - a.rating) || (b.year - a.year); }).slice(0, 12);
@@ -261,7 +267,7 @@
       '</div>';
 
     return { html: html, after: function () {
-      var first = featured[0] || top[0] || L[0];
+      var first = featured[0] || top[0] || L[0] || upcoming[0];
       if (first) setHero('a', first.id, true); else if (X[0]) setHero('x', X[0].id, true);
     } };
   } };
