@@ -193,6 +193,10 @@ function initAdminPanel() {
   if (pingBtn) pingBtn.addEventListener("click", checkAniListStatus);
   checkAniListStatus(); // comprobación automática al entrar al panel
 
+  // Alta manual: abre el mismo editor que AniList, pero en blanco.
+  const manualBtn = document.querySelector("#manual-add-btn");
+  if (manualBtn) manualBtn.addEventListener("click", () => openAddEditor(blankAnimeDraft(), { manual: true }));
+
   renderAnimeList();
   renderAnimeDetail();
 
@@ -326,17 +330,35 @@ function renderSearchResults() {
    año, calificación, estudio, géneros) antes de que queden
    guardados en Firestore para todo el mundo.
    ------------------------------------------------------------ */
-function openAddEditor(item) {
+/* Borrador vacío para crear un anime a mano (sin AniList). */
+function blankAnimeDraft() {
+  return {
+    anilistId: null,
+    title: "",
+    synopsis: "",
+    genres: [],
+    rating: 0,
+    year: new Date().getFullYear(),
+    studio: "",
+    cover: "",
+    banner: "",
+    trailerEmbedUrl: null
+  };
+}
+
+function openAddEditor(item, { manual = false } = {}) {
   const container = document.querySelector("#anilist-edit-container");
   if (!container) return;
 
   container.innerHTML = `
     <div class="admin-section anilist-edit-card">
-      <h3 class="admin-subhead">Revisa los datos antes de agregarlo</h3>
-      <p class="admin-hint">Esto es lo que devolvió AniList para "${escapeAttr(item.title)}". Corrige lo que haga falta (por ejemplo, si la sinopsis viene en inglés o el fondo no te convence) antes de guardarlo en la biblioteca.</p>
+      <h3 class="admin-subhead">${manual ? "Nuevo anime (manual)" : "Revisa los datos antes de agregarlo"}</h3>
+      <p class="admin-hint">${manual
+        ? "Llena los datos del anime. Solo el título es obligatorio; lo demás puedes completarlo o cambiarlo después. Los capítulos, el tráiler y el logo se agregan desde su ficha en \"Mi biblioteca\". Hasta que tenga al menos un capítulo, solo aparecerá en la sección \"Próximamente\"."
+        : `Esto es lo que devolvió AniList para "${escapeAttr(item.title)}". Corrige lo que haga falta (por ejemplo, si la sinopsis viene en inglés o el fondo no te convence) antes de guardarlo en la biblioteca.`}</p>
       <form class="admin-episode-form" id="anilist-edit-form">
         <label>Título
-          <input class="input" type="text" id="edit-title" value="${escapeAttr(item.title)}" required>
+          <input class="input" type="text" id="edit-title" value="${escapeAttr(item.title)}" ${manual ? 'placeholder="Ej. Mi anime"' : ""} required>
         </label>
         <label>Sinopsis
           <textarea class="input" id="edit-synopsis" rows="4">${escapeAttr(item.synopsis || "")}</textarea>
@@ -405,7 +427,7 @@ function openAddEditor(item) {
     editingEpisodeNumber = null;
     renderAnimeList();
     renderAnimeDetail();
-    renderSearchResults();
+    if (lastSearchResults.length) renderSearchResults();
     document.querySelector("#admin-anime-detail").scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
@@ -446,7 +468,7 @@ function renderAnimeList() {
       <img src="${a.cover}" alt="">
       <span>
         <strong>${a.title}</strong>
-        <small>${a.seasons.length > 1 ? `${a.seasons.length} temporadas · ` : ""}${a.episodesCount} capítulo${a.episodesCount === 1 ? "" : "s"} · ${a.source === "anilist" ? "AniList" : "Semilla"}</small>
+        <small>${a.seasons.length > 1 ? `${a.seasons.length} temporadas · ` : ""}${a.episodesCount} capítulo${a.episodesCount === 1 ? "" : "s"} · ${a.source === "anilist" ? "AniList" : a.source === "manual" ? "Manual" : "Semilla"}${a.episodesCount ? "" : " · Próximamente"}</small>
       </span>
     </button>
   `).join("");

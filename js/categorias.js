@@ -41,7 +41,7 @@ function selectGenre(genre) {
     btn.classList.toggle("is-active", btn.dataset.genre === genre);
   });
 
-  const results = ANIME_LIST.filter(a => a.genres.includes(genre));
+  const results = getVisibleAnimes().filter(a => a.genres.includes(genre));
   const section = document.querySelector("#results-section");
   const heading = document.querySelector("#results-heading");
   const grid = document.querySelector("#results-grid");

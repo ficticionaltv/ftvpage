@@ -26,7 +26,7 @@ function render() {
   const query = document.querySelector("#catalog-search").value;
   const sortBy = document.querySelector("#sort-select").value;
 
-  let list = ANIME_LIST.filter(a => matchesSearchQuery(a, query));
+  let list = getVisibleAnimes().filter(a => matchesSearchQuery(a, query));
 
   list = sortList(list, sortBy);
 

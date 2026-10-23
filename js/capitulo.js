@@ -45,7 +45,7 @@ function renderChapter() {
    Episodio de anime (comportamiento original)
    ------------------------------------------------------------ */
 function renderAnimeChapter(id, ep, seasonNumber) {
-  const anime = getAnimeById(id) || ANIME_LIST[0];
+  const anime = getAnimeById(id) || getVisibleAnimes()[0] || ANIME_LIST[0];
   const season = getSeason(anime, seasonNumber);
   const episodes = [...season.episodes].sort((a, b) => a.number - b.number);
   const episode = episodes.find(e => e.number === ep) || episodes[0];

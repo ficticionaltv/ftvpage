@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
 function renderRecommendations() {
   const query = document.querySelector("#reco-search").value;
 
-  let list = ANIME_LIST.filter(a => matchesSearchQuery(a, query));
+  let list = getVisibleAnimes().filter(a => matchesSearchQuery(a, query));
 
   // Único criterio de orden permitido en esta vista: calificación, de
   // mayor a menor. A calificación igual, desempata el más reciente.

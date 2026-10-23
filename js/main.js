@@ -94,7 +94,7 @@ function initHeroSlider() {
   // porque llegó una actualización de Firestore), evita duplicar el timer.
   if (heroTimer) { clearInterval(heroTimer); heroTimer = null; }
 
-  const featured = ANIME_LIST.slice(0, 5);
+  const featured = getVisibleAnimes().slice(0, 5);
   const slidesEl = hero.querySelector(".hero-slides");
   const dotsEl = hero.querySelector(".hero-dots");
 

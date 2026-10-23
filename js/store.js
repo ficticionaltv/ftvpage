@@ -372,6 +372,28 @@ function getAnimeById(id) {
   return ANIME_LIST.find(a => a.id === id);
 }
 
+/* ¿El anime tiene al menos un episodio en alguna de sus temporadas? */
+function animeHasEpisodes(anime) {
+  if (!anime) return false;
+  if (Array.isArray(anime.seasons) && anime.seasons.length) {
+    return anime.seasons.some(s => Array.isArray(s.episodes) && s.episodes.length > 0);
+  }
+  return Array.isArray(anime.episodes) && anime.episodes.length > 0;
+}
+
+/* Animes que se muestran al público en el sitio: solo los que ya tienen
+   episodios. Los que no tienen ninguno solo aparecen en "Próximamente"
+   (inicio) y en el panel de administración, que sigue usando ANIME_LIST
+   completa. */
+function getVisibleAnimes() {
+  return ANIME_LIST.filter(animeHasEpisodes);
+}
+
+/* Animes sin ningún episodio: los de la sección "Próximamente". */
+function getUpcomingAnimes() {
+  return ANIME_LIST.filter(a => !animeHasEpisodes(a));
+}
+
 function animeExistsByAnilistId(anilistId) {
   return anilistId != null && ANIME_LIST.some(a => a.anilistId === anilistId);
 }
@@ -382,8 +404,10 @@ function nextPopularityRank() {
     : 1;
 }
 
-/* Agrega un anime (normalmente proveniente de mapAniListItem()) a la
-   biblioteca. Genera un id único basado en el título. */
+/* Agrega un anime a la biblioteca. Puede venir de AniList
+   (mapAniListItem()) o haberse creado a mano desde el panel (sin
+   anilistId; se guarda con source "manual"). Genera un id único basado
+   en el título. */
 function addAnimeToLibrary(anime) {
   const base = slugify(anime.title);
   let id = base;
@@ -411,7 +435,7 @@ function addAnimeToLibrary(anime) {
       trailerEmbedUrl: anime.trailerEmbedUrl ? normalizeEmbedUrl(anime.trailerEmbedUrl) : null,
       episodes: []
     }],
-    source: "anilist",
+    source: anime.anilistId != null ? "anilist" : "manual",
     anilistId: anime.anilistId != null ? anime.anilistId : null
   };
   syncAnimeDerived(record);

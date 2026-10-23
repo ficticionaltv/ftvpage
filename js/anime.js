@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let selectedSeasonNumber = Number(params.get("season")) || null;
 
   function render() {
-    const anime = getAnimeById(id) || ANIME_LIST[0];
+    const anime = getAnimeById(id) || getVisibleAnimes()[0] || ANIME_LIST[0];
     const season = getSeason(anime, selectedSeasonNumber);
     selectedSeasonNumber = season.number;
 
