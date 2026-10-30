@@ -20,8 +20,11 @@
 
 /* Logo de canal: esquina superior izquierda, pequeño y con margen */
 .ftvp-logo {
-  position: absolute; z-index: 6; left: 3.2rem; top: 2.6rem; height: 5.4rem; width: auto;
-  opacity: .88; pointer-events: none; transition: opacity .2s;
+  position: absolute; z-index: 6;
+  top: clamp(10px, 3.2%, 34px); right: clamp(10px, 2.2%, 36px);
+  height: clamp(35px, 20cqw, 185px); width: auto;
+  opacity: .88; pointer-events: none;
+  transition: opacity .25s;
 }
 .player.bar-on .ftvp-logo { opacity: 0; }
 
