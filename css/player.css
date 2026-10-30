@@ -21,9 +21,8 @@
 .ftvp-logo {
   position: absolute; z-index: 6;
   top: clamp(10px, 3.2%, 34px); right: clamp(10px, 2.2%, 36px);
-  height: clamp(18px, 3.7cqw, 500px); width: auto;
+  height: clamp(100px, 3.7cqw, 500px); width: auto;
   opacity: .88; pointer-events: none;
-  filter: drop-shadow(0 1px 3px rgba(0,0,0,.65));
   transition: opacity .25s;
 }
 
