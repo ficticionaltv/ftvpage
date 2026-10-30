@@ -192,7 +192,7 @@ function extraItemManagerHtml(extra, kind) {
       <label>Título
         <input class="input" type="text" id="extra-${kind}-title" value="${editing ? escapeAttr(editing.title) : ""}" placeholder="Ej. Detrás de cámaras" required>
       </label>
-      <label>URL del reproductor (link normal de YouTube/Dailymotion/Vimeo, o una URL de embed)
+      <label>URL del video (Archive.org, .mp4 directo, .m3u8, YouTube u otro embed)
         <input class="input" type="url" id="extra-${kind}-embed" value="${editing ? escapeAttr(editing.embedUrl || "") : ""}" placeholder="https://www.youtube.com/watch?v=xxxxxxxx">
       </label>
       <label>Miniatura (URL de imagen)
