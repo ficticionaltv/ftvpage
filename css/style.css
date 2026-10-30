@@ -244,36 +244,11 @@ button { font-family: inherit; }
   .nav-toggle { display: block; }
   .nav-search-toggle { display: block; }
 
-  /* El menú y el buscador móviles se muestran como paneles a pantalla
-     completa, posicionados justo debajo del header (que mide 76px de
-     alto) en vez de "empujar" el contenido del header hacia abajo.
-     Así el header conserva siempre su tamaño y ambos paneles se ven
-     como algo que "sale" de él, no como algo apretado dentro. */
+  /* El buscador móvil se muestra como un panel justo debajo del header
+     (76px de alto), sin empujar el contenido del header. El menú de
+     navegación es ahora un panel lateral (.mnav, más abajo). */
 
   .nav-toggle, .nav-search-toggle { position: relative; z-index: 210; }
-
-  .nav.is-open .nav-links {
-    display: flex;
-    position: fixed;
-    top: 76px;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    flex-direction: column;
-    gap: 2px;
-    margin: 0;
-    padding: 22px var(--pad) 32px;
-    background: var(--bg);
-    border-top: 1px solid var(--surface-border);
-    overflow-y: auto;
-    z-index: 200;
-    font-size: 1.15rem;
-  }
-  .nav.is-open .nav-links a {
-    padding: 16px 4px;
-    border-bottom: 1px solid var(--surface-border);
-  }
 
   .nav.is-search-open .nav-search {
     display: flex;
@@ -1431,4 +1406,164 @@ body.nav-lock-scroll .site-header { backdrop-filter: none; }
 @media (max-width: 720px) {
   .season-picker--desktop { display: none; }
   .season-picker--mobile { display: block; margin: 0 0 14px; }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Botón "Extras" (ficha de anime) — va debajo del selector de temporadas */
+/* ---------------------------------------------------------------------- */
+.extras-link { margin-top: 12px; }
+.extras-link[hidden] { display: none !important; }
+.extras-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius);
+  font-weight: 600;
+  transition: border-color .15s var(--ease), background-color .15s var(--ease);
+}
+.extras-btn:hover, .extras-btn:focus-visible { border-color: var(--primary); outline: none; }
+.extras-btn-icon { flex: 0 0 auto; color: var(--primary); }
+.extras-btn-text { flex: 1 1 auto; }
+.extras-btn-count {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 99px;
+  background: var(--primary);
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 700;
+  text-align: center;
+}
+.extras-btn-arrow { flex: 0 0 auto; color: var(--text-muted); }
+
+/* Igual que el selector de temporadas: solo una de las dos versiones es visible. */
+.extras-link--mobile { display: none; }
+@media (max-width: 720px) {
+  .extras-link--desktop { display: none; }
+  .extras-link--mobile { display: block; margin: 0 0 14px; }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Menú móvil — panel lateral (mismo estilo que la barra de la versión TV) */
+/* ---------------------------------------------------------------------- */
+.mnav { display: none; }
+
+@media (max-width: 940px) {
+  .mnav {
+    display: block;
+    position: fixed;
+    top: 0; right: 0; bottom: 0; left: 0;
+    z-index: 300;
+    visibility: hidden;
+    pointer-events: none;
+    transition: visibility 0s linear .3s;
+  }
+  .mnav.is-open { visibility: visible; pointer-events: auto; transition-delay: 0s; }
+
+  .mnav-backdrop {
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    background: rgba(8, 8, 11, .68);
+    opacity: 0;
+    transition: opacity .28s var(--ease);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mnav.is-open .mnav-backdrop { opacity: 1; }
+
+  .mnav-panel {
+    position: absolute;
+    top: 0; bottom: 0; left: 0;
+    width: min(84vw, 340px);
+    display: flex;
+    flex-direction: column;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    background: #0e0e12;
+    border-right: 1px solid var(--surface-border);
+    box-shadow: 8px 0 40px rgba(0, 0, 0, .55);
+    overflow-y: auto;
+    transform: translateX(-100%);
+    transition: transform .28s var(--ease);
+  }
+  .mnav.is-open .mnav-panel { transform: none; }
+
+  .mnav-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 76px;
+    flex: 0 0 auto;
+    padding: 0 12px 0 24px;
+    margin-bottom: 8px;
+  }
+  .mnav-brand { display: inline-flex; align-items: center; gap: 12px; min-width: 0; }
+  .mnav-brand img { width: 40px; height: 40px; object-fit: contain; border-radius: 10px; flex: 0 0 auto; }
+  .mnav-wordmark {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: .01em;
+    white-space: nowrap;
+    color: var(--text);
+  }
+  .mnav-accent { color: var(--primary); }
+  .mnav-dot { color: var(--highlight); }
+  .mnav-close {
+    flex: 0 0 auto;
+    width: 44px; height: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: none; border: none; border-radius: 50%;
+    color: var(--text-muted);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mnav-close:hover, .mnav-close:focus-visible { color: var(--text); background: var(--surface); outline: none; }
+
+  .mnav-list { list-style: none; margin: 0; padding: 8px 0; display: flex; flex-direction: column; }
+  .mnav-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    width: calc(100% - 24px);
+    height: 56px;
+    margin: 3px 12px;
+    padding: 0 20px;
+    border: none;
+    border-radius: 999px;
+    background: none;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 1.08rem;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color .15s var(--ease), color .15s var(--ease);
+  }
+  .mnav-icon { flex: 0 0 auto; width: 24px; height: 24px; }
+  .mnav-item:active { background: var(--surface); }
+  .mnav-item.is-active { color: var(--text); }
+  .mnav-item.is-active .mnav-icon { color: var(--primary); }
+  .mnav-item.is-active::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 14px; bottom: 14px;
+    width: 4px;
+    border-radius: 4px;
+    background: var(--primary);
+  }
+  /* Foco de teclado: igual que en la TV (píldora blanca). */
+  .mnav-item:focus-visible { background: #fff; color: #111; outline: none; }
+  .mnav-item:focus-visible .mnav-icon { color: #111; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mnav, .mnav-backdrop, .mnav-panel { transition: none; }
 }
