@@ -1,0 +1,216 @@
+/* ============================================================
+   FicticionalTV — Estilos del reproductor propio (js/player.js)
+   ============================================================ */
+.ftvp {
+  position: absolute; inset: 0;
+  background: #000; color: #fff;
+  overflow: hidden; user-select: none; -webkit-user-select: none;
+  font-family: inherit; outline: none;
+  container-type: inline-size;
+}
+.ftvp:fullscreen, .ftvp.is-fs { width: 100%; height: 100%; }
+.ftvp.is-idle-ui.is-playing { cursor: none; }
+
+.ftvp-stage, .ftvp-click { position: absolute; inset: 0; }
+.ftvp-stage video, .ftvp-stage iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: #000; object-fit: contain; }
+.ftvp-stage > div { position: absolute; inset: 0; }
+.ftvp-click { z-index: 2; }
+.ftvp.is-iframe .ftvp-click, .ftvp.is-iframe .ftvp-controls, .ftvp.is-iframe .ftvp-shade, .ftvp.is-iframe .ftvp-bigplay { display: none; }
+
+/* ---- Logo de canal (esquina superior izquierda) ---- */
+.ftvp-logo {
+  position: absolute; z-index: 6;
+  top: clamp(10px, 3.2%, 34px); left: clamp(10px, 2.2%, 34px);
+  height: clamp(18px, 3.7cqw, 36px); width: auto;
+  opacity: .88; pointer-events: none;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,.65));
+  transition: opacity .25s;
+}
+
+/* ---- Spinner ---- */
+.ftvp-spinner {
+  position: absolute; z-index: 5; left: 50%; top: 50%;
+  width: 54px; height: 54px; margin: -27px 0 0 -27px;
+  border: 4px solid rgba(255,255,255,.22); border-top-color: var(--primary, #ff1111);
+  border-radius: 50%; animation: ftvp-spin .8s linear infinite;
+  opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.ftvp.is-waiting .ftvp-spinner, .ftvp.is-loading .ftvp-spinner { opacity: 1; }
+@keyframes ftvp-spin { to { transform: rotate(360deg); } }
+
+/* ---- Botón grande de play ---- */
+.ftvp-bigplay {
+  position: absolute; z-index: 5; left: 50%; top: 50%;
+  width: 78px; height: 78px; margin: -39px 0 0 -39px; padding: 0;
+  display: none; align-items: center; justify-content: center;
+  border: 0; border-radius: 50%; cursor: pointer; color: #fff;
+  background: var(--primary, #ff1111);
+  box-shadow: 0 6px 28px rgba(0,0,0,.5);
+  transition: transform .15s var(--ease, ease), background .15s;
+}
+.ftvp-bigplay svg { width: 34px; height: 34px; margin-left: 4px; }
+.ftvp-bigplay:hover { transform: scale(1.07); background: var(--primary-hover, #ff3030); }
+.ftvp.is-paused:not(.is-loading):not(.has-ended):not(.is-error):not(.is-iframe) .ftvp-bigplay { display: flex; }
+.ftvp.is-waiting .ftvp-bigplay { display: none !important; }
+
+/* ---- Sombra inferior + barra de controles ---- */
+.ftvp-shade {
+  position: absolute; inset: auto 0 0 0; height: 38%; z-index: 3; pointer-events: none;
+  background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.78));
+  opacity: 1; transition: opacity .25s;
+}
+.ftvp-controls {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 7;
+  padding: 0 clamp(8px, 1.6cqw, 20px) clamp(6px, 1cqw, 12px);
+  transition: opacity .25s, transform .25s;
+}
+.ftvp.is-idle-ui.is-playing .ftvp-controls { opacity: 0; transform: translateY(8px); pointer-events: none; }
+.ftvp.is-idle-ui.is-playing .ftvp-shade { opacity: 0; }
+
+.ftvp-seek { position: relative; height: 22px; display: flex; align-items: center; cursor: pointer; touch-action: none; }
+.ftvp-seek-track {
+  position: relative; width: 100%; height: 4px; border-radius: 3px;
+  background: rgba(255,255,255,.25); overflow: hidden; transition: height .12s;
+}
+.ftvp-seek:hover .ftvp-seek-track { height: 6px; }
+.ftvp-buf, .ftvp-prog { position: absolute; inset: 0; transform-origin: left center; transform: scaleX(0); }
+.ftvp-buf { background: rgba(255,255,255,.38); }
+.ftvp-prog { background: var(--primary, #ff1111); }
+.ftvp-knob {
+  position: absolute; top: 50%; left: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+  border-radius: 50%; background: var(--primary, #ff1111); box-shadow: 0 0 0 3px rgba(255,17,17,.25);
+  transform: scale(0); transition: transform .12s; pointer-events: none;
+}
+.ftvp-seek:hover .ftvp-knob, .ftvp.is-fs .ftvp-knob { transform: scale(1); }
+.ftvp-tip {
+  position: absolute; bottom: 26px; left: 0; transform: translateX(-50%);
+  padding: 3px 7px; border-radius: 4px; font-size: 12px; font-weight: 600;
+  background: rgba(0,0,0,.85); pointer-events: none; opacity: 0; transition: opacity .1s;
+}
+.ftvp-seek:hover .ftvp-tip { opacity: 1; }
+
+.ftvp-row { display: flex; align-items: center; gap: 2px; }
+.ftvp-spacer { flex: 1; }
+.ftvp-ic {
+  width: 40px; height: 40px; padding: 0; border: 0; border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; color: #fff; cursor: pointer; flex: 0 0 auto;
+  transition: background .12s, color .12s;
+}
+.ftvp-ic:hover { background: rgba(255,255,255,.14); }
+.ftvp-ic:focus-visible { outline: 2px solid var(--highlight, #ffde00); outline-offset: 1px; }
+.ftvp-ic svg { width: 24px; height: 24px; pointer-events: none; }
+.ftvp-ic[hidden] { display: none; }
+.ftvp-i-pause, .ftvp-i-mute, .ftvp-i-fsx { display: none; }
+.ftvp.is-playing .ftvp-i-play { display: none; }
+.ftvp.is-playing .ftvp-i-pause { display: inline-flex; }
+.ftvp.is-muted .ftvp-i-vol { display: none; }
+.ftvp.is-muted .ftvp-i-mute { display: inline-flex; }
+.ftvp.is-fs .ftvp-i-fs { display: none; }
+.ftvp.is-fs .ftvp-i-fsx { display: inline-flex; }
+
+.ftvp-vol { display: flex; align-items: center; }
+.ftvp-vol-range {
+  -webkit-appearance: none; appearance: none; width: 0; opacity: 0; height: 4px; margin: 0;
+  border-radius: 3px; cursor: pointer; transition: width .18s, opacity .18s, margin .18s;
+  background: linear-gradient(90deg, #fff var(--v, 100%), rgba(255,255,255,.28) var(--v, 100%));
+}
+.ftvp-vol:hover .ftvp-vol-range, .ftvp-vol-range:focus { width: 76px; opacity: 1; margin: 0 8px 0 2px; }
+.ftvp-vol-range::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #fff; }
+.ftvp-vol-range::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 50%; background: #fff; }
+
+.ftvp-time { font-size: 13px; font-weight: 600; margin-left: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ftvp-sep { opacity: .6; }
+
+/* ---- Menú de ajustes ---- */
+.ftvp-menu {
+  position: absolute; z-index: 9; right: clamp(8px, 1.6cqw, 20px); bottom: 66px;
+  width: min(340px, calc(100% - 24px)); max-height: calc(100% - 96px); overflow: auto;
+  padding: 14px; border-radius: 10px;
+  background: rgba(20,20,26,.96); border: 1px solid rgba(255,255,255,.1);
+  box-shadow: 0 12px 40px rgba(0,0,0,.55); backdrop-filter: blur(6px);
+}
+.ftvp-menu[hidden] { display: none; }
+.ftvp-menu-group { margin-bottom: 12px; }
+.ftvp-menu-group > span { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted, #9c9ca8); }
+.ftvp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ftvp-chip {
+  padding: 5px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.18);
+  background: transparent; color: #fff; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.ftvp-chip:hover { background: rgba(255,255,255,.1); }
+.ftvp-chip.is-on { background: var(--primary, #ff1111); border-color: var(--primary, #ff1111); }
+.ftvp-switch { display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; margin-bottom: 10px; }
+.ftvp-switch input { position: absolute; opacity: 0; pointer-events: none; }
+.ftvp-switch i { position: relative; flex: 0 0 auto; width: 34px; height: 20px; border-radius: 999px; background: rgba(255,255,255,.25); transition: background .15s; }
+.ftvp-switch i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.ftvp-switch input:checked + i { background: var(--primary, #ff1111); }
+.ftvp-switch input:checked + i::after { transform: translateX(14px); }
+.ftvp-menu-hint { margin: 0; font-size: 11.5px; line-height: 1.5; color: var(--text-faint, #6c6c78); }
+
+/* ---- Toast ---- */
+.ftvp-toast {
+  position: absolute; z-index: 8; left: 50%; top: 14%; transform: translateX(-50%);
+  max-width: 80%; padding: 7px 14px; border-radius: 6px; font-size: 13.5px; font-weight: 600;
+  background: rgba(0,0,0,.78); opacity: 0; pointer-events: none; transition: opacity .2s; text-align: center;
+}
+.ftvp-toast.is-on { opacity: 1; }
+.ftvp-toast button { margin-left: 8px; padding: 3px 9px; border: 0; border-radius: 4px; font-weight: 700; font-size: 12.5px; cursor: pointer; background: var(--highlight, #ffde00); color: #111; pointer-events: auto; }
+.ftvp-toast.is-on:has(button) { pointer-events: auto; }
+
+/* ---- Saltar intro ---- */
+.ftvp-skip {
+  position: absolute; z-index: 8; right: clamp(10px, 2.2cqw, 28px); bottom: 86px;
+  display: none; align-items: center; gap: 8px; padding: 10px 16px;
+  border: 1.5px solid rgba(255,255,255,.85); border-radius: 6px;
+  background: rgba(0,0,0,.6); color: #fff; font-weight: 700; font-size: 14px; cursor: pointer;
+  backdrop-filter: blur(4px); transition: background .15s, color .15s;
+}
+.ftvp-skip svg { width: 16px; height: 16px; }
+.ftvp-skip.is-on { display: inline-flex; animation: ftvp-pop .2s ease-out; }
+.ftvp-skip:hover { background: #fff; color: #111; }
+@keyframes ftvp-pop { from { opacity: 0; transform: translateY(6px); } }
+
+/* ---- Siguiente episodio / fin / error ---- */
+.ftvp-next, .ftvp-end, .ftvp-error { position: absolute; z-index: 9; }
+.ftvp-next[hidden], .ftvp-end[hidden], .ftvp-error[hidden] { display: none; }
+.ftvp-next {
+  right: clamp(10px, 2.2cqw, 28px); bottom: clamp(70px, 14%, 110px);
+  width: min(320px, calc(100% - 24px)); padding: 16px; border-radius: 10px;
+  background: rgba(16,16,22,.94); border: 1px solid rgba(255,255,255,.14); box-shadow: 0 10px 36px rgba(0,0,0,.6);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.ftvp-next-kicker { font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--highlight, #ffde00); }
+.ftvp-next-title { font-size: 15px; line-height: 1.3; }
+.ftvp-next-count { min-height: 17px; font-size: 12.5px; color: var(--text-muted, #9c9ca8); }
+.ftvp-next-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.ftvp-end { inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.55); }
+.ftvp-end[hidden] { display: none; }
+.ftvp-error { inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; text-align: center; padding: 24px; background: rgba(10,10,14,.9); }
+.ftvp-error[hidden] { display: none; }
+.ftvp-error p { margin: 0; color: var(--text-muted, #9c9ca8); }
+.ftvp-btn-primary, .ftvp-btn-ghost {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 16px;
+  border-radius: 6px; font-size: 13.5px; font-weight: 700; cursor: pointer; text-decoration: none; color: #fff;
+  border: 1.5px solid transparent;
+}
+.ftvp-btn-primary { background: var(--primary, #ff1111); border-color: var(--primary, #ff1111); }
+.ftvp-btn-primary:hover { background: var(--primary-hover, #ff3030); }
+.ftvp-btn-primary svg { width: 18px; height: 18px; }
+.ftvp-btn-ghost { background: transparent; border-color: rgba(255,255,255,.4); }
+.ftvp-btn-ghost:hover { background: rgba(255,255,255,.12); }
+.ftvp-btn-ghost[hidden] { display: none; }
+
+/* ---- Pantallas chicas ---- */
+@container (max-width: 560px) {
+  .ftvp-hide-sm { display: none !important; }
+  .ftvp-vol-range { display: none; }
+  .ftvp-ic { width: 36px; height: 36px; }
+  .ftvp-skip { bottom: 76px; padding: 8px 12px; font-size: 13px; }
+  .ftvp-bigplay { width: 60px; height: 60px; margin: -30px 0 0 -30px; }
+  .ftvp-bigplay svg { width: 26px; height: 26px; }
+  .ftvp-next { bottom: 70px; }
+}
+
+/* ---- Tráiler en la ficha del anime ---- */
+.trailer-frame .ftvp { position: absolute; inset: 0; }
