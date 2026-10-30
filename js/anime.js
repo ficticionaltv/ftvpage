@@ -26,6 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
       history.replaceState(null, "", url);
       render();
     });
+    renderExtrasLink(anime);
     renderTrailer(anime, season);
     renderEpisodes(anime, season);
   }
@@ -119,6 +120,30 @@ function renderSeasonPicker(anime, season, onChange) {
       </div>
     `;
     host.querySelector("select").addEventListener("change", (e) => onChange(Number(e.target.value)));
+  });
+}
+
+/* Botón "Extras" bajo el selector de temporadas. Solo aparece si el anime
+   tiene extras vinculados desde el panel de administración. Con un único
+   extra lleva directo a su ficha; con varios, a la lista filtrada. Igual
+   que el selector, hay dos contenedores (PC / móvil) y el CSS muestra uno. */
+function renderExtrasLink(anime) {
+  const extras = getExtrasForAnime(anime.id);
+  const href = extras.length === 1
+    ? `extra.html?id=${encodeURIComponent(extras[0].id)}`
+    : `extras.html?anime=${encodeURIComponent(anime.id)}`;
+
+  document.querySelectorAll(".extras-link").forEach(host => {
+    host.hidden = !extras.length;
+    if (!extras.length) { host.innerHTML = ""; return; }
+    host.innerHTML = `
+      <a class="extras-btn" href="${href}">
+        <svg class="extras-btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 4v16M16 4v16M3 9h5M3 15h5M16 9h5M16 15h5"/></svg>
+        <span class="extras-btn-text">Extras</span>
+        ${extras.length > 1 ? `<span class="extras-btn-count">${extras.length}</span>` : ""}
+        <svg class="extras-btn-arrow" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5L10.5 8 6 12.5"/></svg>
+      </a>
+    `;
   });
 }
 

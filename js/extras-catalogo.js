@@ -28,7 +28,20 @@ function renderExtrasCatalog() {
   const query = document.querySelector("#catalog-search").value;
   const sortBy = document.querySelector("#sort-select").value;
 
-  let list = EXTRAS_LIST.filter(x => matchesSearchQuery(x, query));
+  // ?anime=<id>: solo los extras vinculados a ese anime (botón "Extras" de su ficha).
+  const animeId = new URLSearchParams(window.location.search).get("anime");
+  const anime = animeId ? getAnimeById(animeId) : null;
+  const titleEl = document.querySelector("#extras-title");
+  const subtitleEl = document.querySelector("#extras-subtitle");
+  const backEl = document.querySelector("#extras-anime-back");
+  if (anime) {
+    titleEl.textContent = `Extras de ${anime.title}`;
+    subtitleEl.textContent = "Contenido adicional de este anime: especiales, cortos y más.";
+    backEl.hidden = false;
+    document.title = `Extras de ${anime.title} — FicticionalTV`;
+  }
+
+  let list = EXTRAS_LIST.filter(x => (!anime || x.animeId === anime.id) && matchesSearchQuery(x, query));
   list = sortExtrasList(list, sortBy);
 
   const totalPages = Math.max(1, Math.ceil(list.length / EXTRAS_PAGE_SIZE));

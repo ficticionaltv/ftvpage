@@ -22,52 +22,155 @@ function initHeaderScroll() {
   window.addEventListener("scroll", onScroll, { passive: true });
 }
 
-/* Menú móvil */
+/* Menú móvil: panel lateral con el mismo estilo que la barra de la versión
+   TV (logo arriba, ítems en píldora con icono, el activo con barra roja).
+   Se construye aquí a partir de los enlaces de .nav-links, así todas las
+   páginas lo comparten sin duplicar HTML. */
+const MNAV_ICONS = {
+  search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/>',
+  index: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
+  catalogo: '<rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/>',
+  categorias: '<path d="M3 12V4h8l10 10-8 8L3 12z"/><circle cx="7.5" cy="8.5" r="1.3"/>',
+  recomendaciones: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9L12 3z"/>',
+  extras: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 4v16M16 4v16M3 9h5M3 15h5M16 9h5M16 15h5"/>',
+  _default: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>'
+};
+
+function mnavIcon(key) {
+  return `<svg class="mnav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MNAV_ICONS[key] || MNAV_ICONS._default}</svg>`;
+}
+
 function initMobileNav() {
   const toggle = document.querySelector(".nav-toggle");
   const searchToggle = document.querySelector(".nav-search-toggle");
   const nav = document.querySelector(".nav");
   if (!toggle || !nav) return;
 
+  // Nombre de página sin carpeta ni ".html" (Vercel puede servir /catalogo sin extensión).
+  const pageKey = (path) => ((path || "").split("?")[0].split("#")[0].split("/").pop() || "index").replace(/\.html$/i, "") || "index";
+  const here = pageKey(window.location.pathname);
+
+  const links = [...nav.querySelectorAll(".nav-links a")].map((a) => {
+    const href = a.getAttribute("href") || "#";
+    const key = pageKey(href);
+    return {
+      href, key,
+      label: a.textContent.trim(),
+      active: a.getAttribute("aria-current") === "page" || key === here
+    };
+  });
+
+  const itemHtml = (it) => `
+    <li><a class="mnav-item${it.active ? " is-active" : ""}" href="${it.href}"${it.active ? ' aria-current="page"' : ""}>
+      ${mnavIcon(it.key)}<span class="mnav-label">${it.label}</span>
+    </a></li>`;
+
+  const drawer = document.createElement("div");
+  drawer.className = "mnav";
+  drawer.setAttribute("aria-hidden", "true");
+  drawer.innerHTML = `
+    <div class="mnav-backdrop" data-mnav-close></div>
+    <aside class="mnav-panel" role="dialog" aria-modal="true" aria-label="Navegación principal">
+      <div class="mnav-head">
+        <a class="mnav-brand" href="index.html" aria-label="FicticionalTV — Inicio">
+          <img src="img/favicon.png" alt="" onerror="this.style.display='none'">
+          <span class="mnav-wordmark"><span>Fictic</span><span class="mnav-accent">ional</span><span class="mnav-dot">TV</span></span>
+        </a>
+        <button type="button" class="mnav-close" data-mnav-close aria-label="Cerrar menú">
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 5l12 12M17 5L5 17"/></svg>
+        </button>
+      </div>
+      <ul class="mnav-list">
+        <li><button type="button" class="mnav-item" data-mnav-search>${mnavIcon("search")}<span class="mnav-label">Buscar</span></button></li>
+        ${itemHtml({ href: "index.html", key: "index", label: "Inicio", active: here === "index" })}
+        ${links.map(itemHtml).join("")}
+      </ul>
+    </aside>`;
+  document.body.appendChild(drawer);
+
+  const panel = drawer.querySelector(".mnav-panel");
+
   // Bloquea el scroll del body mientras el menú o el buscador móvil
-  // ocupan toda la pantalla, para que no se pueda desplazar el fondo.
+  // ocupan la pantalla, para que no se pueda desplazar el fondo.
   const syncBodyScroll = () => {
-    const anyOpen = nav.classList.contains("is-open") || nav.classList.contains("is-search-open");
+    const anyOpen = drawer.classList.contains("is-open") || nav.classList.contains("is-search-open");
     document.body.classList.toggle("nav-lock-scroll", anyOpen);
   };
 
-  toggle.addEventListener("click", () => {
-    const isOpen = nav.classList.toggle("is-open");
-    toggle.setAttribute("aria-expanded", String(isOpen));
-    if (isOpen && searchToggle) {
+  const openMenu = () => {
+    if (searchToggle) {
       nav.classList.remove("is-search-open");
       searchToggle.setAttribute("aria-expanded", "false");
     }
+    drawer.classList.add("is-open");
+    drawer.setAttribute("aria-hidden", "false");
+    toggle.setAttribute("aria-expanded", "true");
     syncBodyScroll();
+    const first = panel.querySelector(".mnav-item.is-active") || panel.querySelector(".mnav-item");
+    if (first) setTimeout(() => first.focus({ preventScroll: true }), 60);
+  };
+
+  const closeMenu = (restoreFocus = true) => {
+    if (!drawer.classList.contains("is-open")) return;
+    drawer.classList.remove("is-open");
+    drawer.setAttribute("aria-hidden", "true");
+    toggle.setAttribute("aria-expanded", "false");
+    syncBodyScroll();
+    if (restoreFocus) toggle.focus({ preventScroll: true });
+  };
+
+  toggle.addEventListener("click", () => {
+    drawer.classList.contains("is-open") ? closeMenu() : openMenu();
   });
+
+  drawer.querySelectorAll("[data-mnav-close]").forEach((el) => el.addEventListener("click", () => closeMenu()));
+
+  // Tocar un enlace cierra el panel (y navega).
+  drawer.querySelectorAll("a.mnav-item, a.mnav-brand").forEach((a) => a.addEventListener("click", () => closeMenu(false)));
+
+  // "Buscar" abre el mismo buscador móvil que ya existía.
+  drawer.querySelector("[data-mnav-search]").addEventListener("click", () => {
+    closeMenu(false);
+    if (searchToggle) searchToggle.click();
+    else window.location.href = "catalogo.html";
+  });
+
+  // Teclado: Esc cierra; Tab se queda dentro del panel mientras está abierto.
+  document.addEventListener("keydown", (e) => {
+    if (!drawer.classList.contains("is-open")) return;
+    if (e.key === "Escape") { closeMenu(); return; }
+    if (e.key !== "Tab") return;
+    const f = [...panel.querySelectorAll("a[href], button")].filter((el) => el.offsetParent !== null);
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+
+  // Gesto: deslizar el panel hacia la izquierda lo cierra.
+  let touchX = null;
+  panel.addEventListener("touchstart", (e) => { touchX = e.touches[0].clientX; }, { passive: true });
+  panel.addEventListener("touchend", (e) => {
+    if (touchX === null) return;
+    if (touchX - e.changedTouches[0].clientX > 60) closeMenu();
+    touchX = null;
+  }, { passive: true });
+
+  // Si la ventana pasa a ancho de escritorio con el panel abierto, lo cerramos.
+  window.addEventListener("resize", () => { if (window.innerWidth > 940) closeMenu(false); });
 
   if (searchToggle) {
     searchToggle.addEventListener("click", () => {
       const isOpen = nav.classList.toggle("is-search-open");
       searchToggle.setAttribute("aria-expanded", String(isOpen));
       if (isOpen) {
-        nav.classList.remove("is-open");
-        toggle.setAttribute("aria-expanded", "false");
+        closeMenu(false);
         const input = nav.querySelector(".nav-search input");
         if (input) requestAnimationFrame(() => input.focus());
       }
       syncBodyScroll();
     });
   }
-
-  // Cierra el menú a pantalla completa al tocar un enlace.
-  nav.querySelectorAll(".nav-links a").forEach((link) => {
-    link.addEventListener("click", () => {
-      nav.classList.remove("is-open");
-      toggle.setAttribute("aria-expanded", "false");
-      syncBodyScroll();
-    });
-  });
 }
 
 /* Buscador del header: redirige al catálogo con la consulta */

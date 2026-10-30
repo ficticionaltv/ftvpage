@@ -234,6 +234,8 @@ function normalizeExtraRecord(x) {
     cover: x.cover || coverUrl(id),
     banner: x.banner || x.cover || bannerUrl(id),
     logo: x.logo || null,
+    // Anime al que pertenece este extra (id de ANIME_LIST) o null si es independiente.
+    animeId: typeof x.animeId === "string" && x.animeId.trim() ? x.animeId.trim() : null,
     audio,
     video,
     source: "extra"
@@ -642,6 +644,13 @@ function getExtraById(id) {
   return EXTRAS_LIST.find(x => x.id === id);
 }
 
+/* Extras vinculados a un anime (los que se asignaron desde el panel de
+   administración con el campo "Anime al que pertenece"). */
+function getExtrasForAnime(animeId) {
+  if (!animeId) return [];
+  return EXTRAS_LIST.filter(x => x.animeId === animeId);
+}
+
 function nextExtraPopularityRank() {
   return EXTRAS_LIST.length
     ? Math.max(...EXTRAS_LIST.map(x => x.popularityRank || 0)) + 1
@@ -672,6 +681,7 @@ function addExtraToLibrary(extra) {
     cover: extra.cover || coverUrl(id),
     banner: extra.banner || extra.cover || bannerUrl(id),
     logo: extra.logo || null,
+    animeId: typeof extra.animeId === "string" && extra.animeId.trim() ? extra.animeId.trim() : null,
     audio: [],
     video: [],
     source: "extra"
@@ -696,6 +706,7 @@ function updateExtraDetails(extraId, patch = {}) {
   if (typeof patch.synopsis === "string") extra.synopsis = patch.synopsis.trim() || "Sinopsis no disponible todavía.";
   if (Array.isArray(patch.genres)) extra.genres = patch.genres.length ? patch.genres : ["Sin categoría"];
   if (patch.studio && patch.studio.trim()) extra.studio = patch.studio.trim();
+  if ("animeId" in patch) extra.animeId = patch.animeId && String(patch.animeId).trim() ? String(patch.animeId).trim() : null;
   persist();
   return extra;
 }

@@ -14,6 +14,22 @@
 let selectedExtraId = null;
 let editingExtraItem = { audio: null, video: null };
 
+/* <option>s con todos los animes de la biblioteca, para vincular un extra
+   con su anime. `selectedId` marca el que ya está asignado. */
+function extraAnimeOptionsHtml(selectedId) {
+  const animes = [...ANIME_LIST].sort((a, b) => a.title.localeCompare(b.title));
+  return `<option value="">— Ninguno (extra independiente) —</option>` + animes.map(a =>
+    `<option value="${escapeAttr(a.id)}" ${a.id === selectedId ? "selected" : ""}>${escapeAttr(a.title)}</option>`
+  ).join("");
+}
+
+function fillExtraCreateAnimeSelect() {
+  const sel = document.querySelector("#extra-anime");
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = extraAnimeOptionsHtml(current);
+}
+
 function initAdminExtrasPanel() {
   const params = new URLSearchParams(window.location.search);
   if (!selectedExtraId) selectedExtraId = params.get("extra") || null;
@@ -21,12 +37,14 @@ function initAdminExtrasPanel() {
   const createForm = document.querySelector("#extra-create-form");
   if (createForm) createForm.addEventListener("submit", handleExtraCreate);
 
+  fillExtraCreateAnimeSelect();
   renderExtrasList();
   renderExtraDetail();
 
   // Si Firestore confirma el cambio (o llega uno desde otro
   // dispositivo/pestaña), refresca la lista y el detalle.
   onLibraryChange(() => {
+    fillExtraCreateAnimeSelect();
     renderExtrasList();
     renderExtraDetail();
   });
@@ -44,6 +62,7 @@ function handleExtraCreate(e) {
     rating: Number(document.querySelector("#extra-rating").value) || 0,
     studio: document.querySelector("#extra-studio").value.trim(),
     genres: document.querySelector("#extra-genres").value.split(",").map(g => g.trim()).filter(Boolean),
+    animeId: document.querySelector("#extra-anime").value,
     cover: document.querySelector("#extra-cover").value.trim(),
     banner: document.querySelector("#extra-banner").value.trim()
   });
@@ -74,7 +93,7 @@ function renderExtrasList() {
       <img src="${x.cover}" alt="">
       <span>
         <strong>${x.title}</strong>
-        <small>${(x.audio || []).length} audio · ${(x.video || []).length} video</small>
+        <small>${(x.audio || []).length} audio · ${(x.video || []).length} video${x.animeId && getAnimeById(x.animeId) ? ` · ${escapeAttr(getAnimeById(x.animeId).title)}` : ""}</small>
       </span>
     </button>
   `).join("");
@@ -121,6 +140,10 @@ function renderExtraDetail() {
       <label>Sinopsis
         <textarea class="input" id="extra-info-synopsis" rows="3">${escapeAttr(extra.synopsis || "")}</textarea>
       </label>
+      <label>Anime al que pertenece
+        <select class="input" id="extra-info-anime">${extraAnimeOptionsHtml(extra.animeId)}</select>
+      </label>
+      <p class="admin-hint">Si eliges un anime, su ficha mostrará un botón "Extras" debajo de la lista de temporadas que lleva a este extra.</p>
       <label>Estudio
         <input class="input" type="text" id="extra-info-studio" value="${escapeAttr(extra.studio || "")}">
       </label>
@@ -237,7 +260,8 @@ function wireExtraDetailForms(extra) {
       updateExtraDetails(extra.id, {
         synopsis: document.querySelector("#extra-info-synopsis").value,
         studio: document.querySelector("#extra-info-studio").value.trim(),
-        genres: document.querySelector("#extra-info-genres").value.split(",").map(g => g.trim()).filter(Boolean)
+        genres: document.querySelector("#extra-info-genres").value.split(",").map(g => g.trim()).filter(Boolean),
+        animeId: document.querySelector("#extra-info-anime").value
       });
       renderExtraDetail();
       renderExtrasList();
