@@ -185,6 +185,16 @@ function normalizeRating(rating) {
   return Math.min(10, Math.max(0, n));
 }
 
+/* Segundos (número o texto "1:30" / "90"); devuelve null si no es válido.
+   Se usa para marcar dónde empieza y termina la intro de un capítulo. */
+function normalizeSeconds(value) {
+  if (value == null || value === "") return null;
+  if (typeof value === "number") return Number.isFinite(value) && value >= 0 ? Math.round(value) : null;
+  const parts = String(value).trim().split(":").map(p => Number(p));
+  if (!parts.length || parts.length > 3 || parts.some(n => !Number.isFinite(n) || n < 0)) return null;
+  return Math.round(parts.reduce((acc, n) => acc * 60 + n, 0));
+}
+
 function normalizeEpisodeRecord(animeId, ep) {
   ep = ep || {};
   const number = typeof ep.number === "number" && !Number.isNaN(ep.number) ? ep.number : 1;
@@ -194,7 +204,9 @@ function normalizeEpisodeRecord(animeId, ep) {
     title: ep.title && String(ep.title).trim() ? ep.title : `Episodio ${number}`,
     thumb: ep.thumb || epThumbUrl(animeId, number),
     duration: ep.duration && String(ep.duration).trim() ? ep.duration : "23 min",
-    embedUrl: ep.embedUrl ? normalizeEmbedUrl(ep.embedUrl) : null
+    embedUrl: ep.embedUrl ? normalizeEmbedUrl(ep.embedUrl) : null,
+    introStart: normalizeSeconds(ep.introStart),
+    introEnd: normalizeSeconds(ep.introEnd)
   };
 }
 
@@ -573,7 +585,9 @@ function addEpisodeToAnime(animeId, episode, seasonNumber) {
     title: episode.title && episode.title.trim() ? episode.title.trim() : `Episodio ${number}`,
     thumb: episode.thumb || epThumbUrl(seasonThumbSeed(anime, season), number),
     duration: episode.duration && episode.duration.trim() ? episode.duration.trim() : "23 min",
-    embedUrl: episode.embedUrl ? normalizeEmbedUrl(episode.embedUrl) : null
+    embedUrl: episode.embedUrl ? normalizeEmbedUrl(episode.embedUrl) : null,
+    introStart: normalizeSeconds(episode.introStart),
+    introEnd: normalizeSeconds(episode.introEnd)
   };
 
   season.episodes = season.episodes.filter(e => e.number !== number);
@@ -599,6 +613,8 @@ function updateEpisode(animeId, number, patch, seasonNumber) {
   if (patch.title && patch.title.trim()) ep.title = patch.title.trim();
   if (patch.duration && patch.duration.trim()) ep.duration = patch.duration.trim();
   ep.embedUrl = patch.embedUrl ? normalizeEmbedUrl(patch.embedUrl) : null;
+  ep.introStart = normalizeSeconds(patch.introStart);
+  ep.introEnd = normalizeSeconds(patch.introEnd);
   ep.thumb = (patch.thumb && patch.thumb.trim()) ? patch.thumb.trim() : epThumbUrl(seasonThumbSeed(anime, season), ep.number);
   syncAnimeDerived(anime);
   persist();

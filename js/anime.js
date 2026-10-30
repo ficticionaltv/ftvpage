@@ -130,11 +130,19 @@ function renderTrailer(anime, season) {
   if (heading) heading.textContent = anime.seasons.length > 1 ? `Tráiler · Temporada ${season.number}` : "Tráiler";
 
   if (season.trailerEmbedUrl) {
-    container.innerHTML = `
-      <div class="trailer-frame">
-        <iframe src="${season.trailerEmbedUrl}" title="Tráiler de ${escapeHtml(anime.title)}${anime.seasons.length > 1 ? ` — Temporada ${season.number}` : ""}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-      </div>
-    `;
+    // Mismo reproductor propio que en los capítulos. Si ya está montado con
+    // este mismo tráiler (p. ej. llegó una actualización de Firestore), no
+    // lo reiniciamos para no cortar la reproducción.
+    let frame = container.querySelector(".trailer-frame");
+    if (frame && frame.dataset.src === season.trailerEmbedUrl && frame._ftv) return;
+    container.innerHTML = `<div class="trailer-frame"></div>`;
+    frame = container.querySelector(".trailer-frame");
+    frame.dataset.src = season.trailerEmbedUrl;
+    FtvPlayer.mount(frame, {
+      src: season.trailerEmbedUrl,
+      title: `Tráiler de ${anime.title}`,
+      resumeKey: ""
+    });
   } else {
     container.innerHTML = `<div class="trailer-empty">Todavía no hay tráiler disponible para ${anime.seasons.length > 1 ? "esta temporada" : "este anime"}.</div>`;
   }

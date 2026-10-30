@@ -18,7 +18,29 @@ document.addEventListener("DOMContentLoaded", () => {
   // último guardado sin necesidad de recargar la página a mano.
   onLibraryReady(() => renderChapter());
   onLibraryChange(() => renderChapter());
+
+  // Botón "atrás" del navegador tras una navegación interna.
+  window.addEventListener("popstate", () => renderChapter());
+
+  // Los enlaces de siguiente/anterior cambian de episodio SIN recargar la
+  // página: así el reproductor se mantiene (y la pantalla completa también).
+  document.addEventListener("click", (e) => {
+    const link = e.target.closest && e.target.closest(".chapter-sidebar a.side-ep-card");
+    if (!link || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    navigateToChapter(link.getAttribute("href"), true);
+  });
 });
+
+/* Cambia de capítulo dentro de la misma página (History API). */
+let pendingAutoplay = false;
+function navigateToChapter(href, autoplay) {
+  pendingAutoplay = !!autoplay;
+  history.pushState(null, "", href);
+  renderChapter();
+  const frame = document.querySelector(".chapter-player");
+  if (frame && frame.getBoundingClientRect().top < 0) frame.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
 function getChapterParams() {
   const params = new URLSearchParams(window.location.search);
@@ -26,6 +48,7 @@ function getChapterParams() {
     id: params.get("id"),
     season: Number(params.get("season")) || null,
     ep: Number(params.get("ep")) || 1,
+    autoplay: params.get("autoplay") === "1",
     extraId: params.get("extra"),
     type: params.get("type") === "video" ? "video" : "audio",
     num: Number(params.get("num")) || 1
@@ -33,18 +56,20 @@ function getChapterParams() {
 }
 
 function renderChapter() {
-  const { id, season, ep, extraId, type, num } = getChapterParams();
+  const { id, season, ep, extraId, type, num, autoplay } = getChapterParams();
+  const wantAutoplay = pendingAutoplay || autoplay;
+  pendingAutoplay = false;
   if (extraId) {
-    renderExtraChapter(extraId, type, num);
+    renderExtraChapter(extraId, type, num, wantAutoplay);
   } else {
-    renderAnimeChapter(id, ep, season);
+    renderAnimeChapter(id, ep, season, wantAutoplay);
   }
 }
 
 /* ------------------------------------------------------------
    Episodio de anime (comportamiento original)
    ------------------------------------------------------------ */
-function renderAnimeChapter(id, ep, seasonNumber) {
+function renderAnimeChapter(id, ep, seasonNumber, autoplay) {
   const anime = getAnimeById(id) || getVisibleAnimes()[0] || ANIME_LIST[0];
   const season = getSeason(anime, seasonNumber);
   const episodes = [...season.episodes].sort((a, b) => a.number - b.number);
@@ -78,7 +103,28 @@ function renderAnimeChapter(id, ep, seasonNumber) {
   // Marca este episodio como visto en cuanto se abre su reproductor.
   markWatched(watchKey, episode.number);
 
-  renderPlayer(anime.title, episode);
+  // Siguiente episodio: el de esta temporada o, si era el último, el primero
+  // de la temporada siguiente.
+  let nextEp = episodes[episodes.findIndex(e => e.number === episode.number) + 1];
+  let nextSeason = season;
+  if (!nextEp) {
+    const later = anime.seasons.filter(s => s.number > season.number && s.episodes.length).sort((a, b) => a.number - b.number)[0];
+    if (later) {
+      nextSeason = later;
+      nextEp = [...later.episodes].sort((a, b) => a.number - b.number)[0];
+    }
+  }
+  const nextTag = anime.seasons.length > 1 ? `T${nextSeason.number} ` : "";
+  const nextHref = nextEp ? `capitulo.html?id=${anime.id}&season=${nextSeason.number}&ep=${nextEp.number}` : null;
+
+  renderPlayer(anime.title, episode, {
+    resumeKey: `${watchKey}:${episode.number}`,
+    autoplay,
+    next: nextEp ? {
+      title: `${nextTag}E${nextEp.number} - ${nextEp.title}`,
+      onPlay: () => navigateToChapter(nextHref, true)
+    } : null
+  });
   renderHeaderInfo({
     kickerText: multiSeason ? `${anime.title} · ${seasonLabel(season)}` : anime.title,
     kickerHref: `anime.html?id=${anime.id}&${seasonQuery}`,
@@ -103,7 +149,7 @@ function renderAnimeChapter(id, ep, seasonNumber) {
 /* ------------------------------------------------------------
    Ítem de un extra (audio o video)
    ------------------------------------------------------------ */
-function renderExtraChapter(extraId, type, num) {
+function renderExtraChapter(extraId, type, num, autoplay) {
   const extra = getExtraById(extraId) || EXTRAS_LIST[0];
   if (!extra) {
     document.title = "FicticionalTV";
@@ -140,7 +186,15 @@ function renderExtraChapter(extraId, type, num) {
 
   markWatched(`extra:${extra.id}:${type}`, item.number);
 
-  renderPlayer(extra.title, item);
+  const nextItem = items[items.findIndex(i => i.number === item.number) + 1];
+  renderPlayer(extra.title, item, {
+    resumeKey: `extra:${extra.id}:${type}:${item.number}`,
+    autoplay,
+    next: nextItem ? {
+      title: `${kindLetter}${nextItem.number} - ${nextItem.title}`,
+      onPlay: () => navigateToChapter(`capitulo.html?extra=${extra.id}&type=${type}&num=${nextItem.number}`, true)
+    } : null
+  });
   renderHeaderInfo({
     kickerText: extra.title,
     kickerHref: `extra.html?id=${extra.id}`,
@@ -165,33 +219,44 @@ function renderExtraChapter(extraId, type, num) {
 /* ------------------------------------------------------------
    Piezas compartidas por ambos tipos de contenido
    ------------------------------------------------------------ */
-function renderPlayer(titleForPlayer, episode) {
+function renderPlayer(titleForPlayer, episode, extra = {}) {
   const wrap = document.querySelector("#player-wrap");
-  if (episode.embedUrl) {
-    // OJO: antes este <iframe> forzaba referrerpolicy="no-referrer". La
-    // mayoría de los sitios de video no le dan importancia, pero YouTube
-    // sí: necesita recibir el origen/referrer de la página para
-    // autorizar la reproducción embebida, y sin él responde con el
-    // "Error 153" ("video player configuration error") en vez de
-    // reproducir el video. Al quitar el atributo, el navegador usa su
-    // política de referrer por defecto (strict-origin-when-cross-origin),
-    // que sí manda esa información y funciona igual de bien con
-    // cualquier otro proveedor de video.
-    wrap.innerHTML = `
-      <iframe
-        src="${episode.embedUrl}"
-        title="Reproductor de ${titleForPlayer} — ${episode.title}"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowfullscreen
-        loading="lazy"></iframe>
-    `;
-  } else {
+
+  if (!episode.embedUrl) {
+    if (wrap._ftv) wrap._ftv.destroy();
+    delete wrap.dataset.key;
     wrap.innerHTML = `
       <div class="no-embed-msg">
         <p>Este episodio todavía no tiene un reproductor configurado.</p>
       </div>
     `;
+    return;
   }
+
+  // Reproductor propio (js/player.js): reproduce archivos directos, Archive.org,
+  // HLS y YouTube con interfaz de FicticionalTV; cualquier otro embed se
+  // muestra en un iframe con el logo encima.
+  //
+  // renderChapter() también se ejecuta cada vez que Firestore avisa de un
+  // cambio. Si seguimos en el mismo video no lo reiniciamos (cortaría la
+  // reproducción): solo actualizamos intro y siguiente episodio.
+  const key = `${extra.resumeKey || ""}|${episode.embedUrl}`;
+  const introStart = Number.isFinite(episode.introStart) ? episode.introStart : null;
+  const introEnd = Number.isFinite(episode.introEnd) ? episode.introEnd : null;
+
+  if (wrap._ftv && wrap.dataset.key === key) {
+    wrap._ftv.setOptions({ introStart, introEnd, next: extra.next || null });
+    return;
+  }
+  wrap.dataset.key = key;
+  FtvPlayer.mount(wrap, {
+    src: episode.embedUrl,
+    title: `${titleForPlayer} — ${episode.title}`,
+    resumeKey: extra.resumeKey || "",
+    introStart, introEnd,
+    next: extra.next || null,
+    autoplay: !!extra.autoplay
+  });
 }
 
 /* Kicker, título, y fila de meta (duración · audio/tipo · posición). */

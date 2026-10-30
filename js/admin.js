@@ -623,10 +623,19 @@ function renderAnimeDetail() {
       <label>Título del episodio
         <input class="input" type="text" id="ep-title" value="${editing ? escapeAttr(editing.title) : ""}" placeholder="Ej. El despertar" required>
       </label>
-      <label>URL del reproductor (link normal de YouTube/Dailymotion/Vimeo, o una URL de embed)
-        <input class="input" type="url" id="ep-embed" value="${editing ? escapeAttr(editing.embedUrl || "") : ""}" placeholder="https://www.youtube.com/watch?v=xxxxxxxx">
+      <label>URL del video
+        <input class="input" type="url" id="ep-embed" value="${editing ? escapeAttr(editing.embedUrl || "") : ""}" placeholder="https://archive.org/details/mi-episodio  ·  https://youtube.com/watch?v=…  ·  https://…/ep1.mp4">
       </label>
-      <p class="admin-hint">Pega el link tal cual lo copias del navegador (YouTube, Dailymotion, Vimeo) — se convierte automáticamente al formato de reproductor. Si tu proveedor de video es otro, pega directamente la URL de "embed" que te dé. Puedes dejarlo vacío y completarlo después.</p>
+      <p class="admin-hint">Con el reproductor propio de FicticionalTV puedes pegar: un link de <strong>Archive.org</strong> (archive.org/details/… o el link directo al .mp4), un archivo de video directo (.mp4, .webm), un stream <strong>.m3u8</strong> (HLS) o un link de <strong>YouTube</strong>. Cualquier otro proveedor (Vimeo, Dailymotion, etc.) se muestra en su propio reproductor, con el logo encima. Puedes dejarlo vacío y completarlo después.</p>
+      <div class="form-row">
+        <label>Intro desde (opcional)
+          <input class="input" type="text" id="ep-intro-start" value="${editing && editing.introStart != null ? editing.introStart : ""}" placeholder="0 · o 0:05">
+        </label>
+        <label>Intro hasta (opcional)
+          <input class="input" type="text" id="ep-intro-end" value="${editing && editing.introEnd != null ? editing.introEnd : ""}" placeholder="90 · o 1:30">
+        </label>
+      </div>
+      <p class="admin-hint">Si indicas dónde termina la intro (en segundos, o en formato m:ss), durante ese tramo aparece el botón "Saltar intro" en el reproductor.</p>
       <label>Miniatura del episodio (URL de imagen)
         <input class="input" type="url" id="ep-thumb" value="${editing ? escapeAttr(editing.thumb || "") : ""}" placeholder="https://ejemplo.com/miniaturas/ep1.jpg">
       </label>
@@ -757,13 +766,15 @@ function handleEpisodeSubmit(e) {
   const duration = document.querySelector("#ep-duration").value.trim();
   const embedUrl = document.querySelector("#ep-embed").value.trim();
   const thumb = document.querySelector("#ep-thumb").value.trim();
+  const introStart = document.querySelector("#ep-intro-start").value.trim();
+  const introEnd = document.querySelector("#ep-intro-end").value.trim();
 
   const seasonNumber = getSeason(anime, selectedSeasonNumber).number;
 
   if (editingEpisodeNumber !== null) {
-    updateEpisode(anime.id, editingEpisodeNumber, { title, duration, embedUrl, thumb }, seasonNumber);
+    updateEpisode(anime.id, editingEpisodeNumber, { title, duration, embedUrl, thumb, introStart, introEnd }, seasonNumber);
   } else {
-    addEpisodeToAnime(anime.id, { number, title, duration, embedUrl, thumb }, seasonNumber);
+    addEpisodeToAnime(anime.id, { number, title, duration, embedUrl, thumb, introStart, introEnd }, seasonNumber);
   }
 
   editingEpisodeNumber = null;
