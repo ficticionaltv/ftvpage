@@ -103,7 +103,9 @@
     barHidden: false,
     byMouse: false,
     live: true,
-    isPlayer: false
+    isPlayer: false,
+    player: null,
+    pendingPlayer: null
   };
 
   /* --------------------------------------------- datos (misma fuente web) */
@@ -502,17 +504,27 @@
     } catch (e) { /* url rara: se usa tal cual */ }
     return u;
   }
+  /* Reproductor propio (js/player.js) en modo TV. Las fuentes que el
+     reproductor no puede controlar (Vimeo, Dailymotion u otros embeds) se
+     muestran en su iframe, y para esas se mantiene el botón "Controlar video". */
   function playerHtml(o) {
+    var needsControl = false;
+    if (o.embed) {
+      try { var t = ftvDetectSource(o.embed).type; needsControl = (t === 'iframe' || t === 'archive'); } catch (e) { needsControl = true; }
+    }
+    state.pendingPlayer = o.embed ? o : null;
     var body = o.embed
-      ? '<iframe id="player-frame" src="' + esc(withAutoplay(o.embed)) + '" title="' + esc(o.title) + '" allow="autoplay; fullscreen; encrypted-media; picture-in-picture; clipboard-write" allowfullscreen></iframe>'
+      ? '<div class="tv-host" id="tv-host"></div>'
       : '<div class="player-novideo">' + ICON.video + '<div>Este contenido todavía no tiene video configurado.</div></div>';
-    return '<div class="player">' + body +
+    return '<div class="player" id="player-root">' + body +
       '<div class="player-bar" id="player-bar" data-autohide="' + (o.embed ? '1' : '0') + '">' +
         '<a class="btn focusable" data-act="back" href="' + o.backHref + '" data-fk="p:back">' + ICON.back + '<span>Volver</span></a>' +
         '<div class="player-titles"><div class="player-kicker">' + esc(o.kicker) + '</div><div class="player-title">' + esc(o.title) + '</div></div>' +
         (o.prev ? '<a class="btn focusable" data-replace href="' + o.prev + '" data-fk="p:prev">' + ICON.prev + '<span>Anterior</span></a>' : '') +
         (o.next ? '<a class="btn focusable" data-replace href="' + o.next + '" data-fk="p:next">' + ICON.next + '<span>Siguiente</span></a>' : '') +
-        (o.embed ? '<button class="btn btn-primary focusable" data-act="control" data-fk="p:control" data-autofocus>' + ICON.play + '<span>Controlar video</span></button>' : '') +
+        (o.embed && !needsControl ? '<button class="btn focusable" data-act="speed" data-fk="p:speed"><span>Velocidad: 1×</span></button>' : '') +
+        (o.embed && !needsControl ? '<button class="btn focusable" data-act="quality" data-fk="p:quality" style="display:none"><span>Calidad</span></button>' : '') +
+        (o.embed && needsControl ? '<button class="btn btn-primary focusable" data-act="control" data-fk="p:control" data-autofocus>' + ICON.play + '<span>Controlar video</span></button>' : '') +
       '</div></div>';
   }
 
@@ -527,6 +539,8 @@
     markWatched('anime:' + a.id, ep.number);
     pushRecent({ k: 'anime:' + a.id, kind: 'a', id: a.id, n: ep.number });
     return { html: playerHtml({
+      resumeKey: 'anime:' + a.id + ':' + ep.number, introStart: ep.introStart, introEnd: ep.introEnd,
+      nextTitle: eps[i + 1] ? 'E' + eps[i + 1].number + ' · ' + eps[i + 1].title : '',
       kicker: a.title, title: 'E' + ep.number + ' · ' + ep.title, embed: ep.embedUrl, backHref: '#/anime/' + encodeURIComponent(a.id),
       prev: eps[i - 1] ? '#/watch/' + encodeURIComponent(a.id) + '/' + eps[i - 1].number : '',
       next: eps[i + 1] ? '#/watch/' + encodeURIComponent(a.id) + '/' + eps[i + 1].number : ''
@@ -545,6 +559,8 @@
     markWatched('extra:' + x.id + ':' + kind, it.number);
     pushRecent({ k: 'extra:' + x.id + ':' + kind, kind: 'x', id: x.id, type: kind, n: it.number });
     return { html: playerHtml({
+      resumeKey: 'extra:' + x.id + ':' + kind + ':' + it.number,
+      nextTitle: items[i + 1] ? L + items[i + 1].number + ' · ' + items[i + 1].title : '',
       kicker: x.title, title: L + it.number + ' · ' + it.title, embed: it.embedUrl, backHref: '#/extra/' + encodeURIComponent(x.id),
       prev: items[i - 1] ? base + items[i - 1].number : '', next: items[i + 1] ? base + items[i + 1].number : ''
     }), after: initPlayer };
@@ -556,15 +572,82 @@
     return { html: playerHtml({ kicker: a.title, title: 'Tráiler', embed: a.trailerEmbedUrl, backHref: '#/anime/' + encodeURIComponent(a.id) }), after: initPlayer };
   } };
 
-  /* La barra del reproductor se oculta sola; cualquier tecla la vuelve a mostrar. */
-  function initPlayer() { state.isPlayer = true; wakeBar(); }
+  /* Monta el reproductor propio y la barra superior (se oculta sola; cualquier tecla la muestra). */
+  function initPlayer() {
+    state.isPlayer = true;
+    var o = state.pendingPlayer, host = $('#tv-host');
+    state.player = null;
+    if (o && host && typeof FtvPlayer !== 'undefined') {
+      try {
+        state.player = FtvPlayer.mount(host, {
+          tv: true, autoplay: true, src: o.embed, title: o.kicker + ' — ' + o.title,
+          logo: '../img/logo-player.png', resumeKey: o.resumeKey || '',
+          introStart: o.introStart, introEnd: o.introEnd,
+          next: o.next ? { title: o.nextTitle || '', onPlay: function () { location.replace(o.next); } } : null,
+          onUi: updatePlayerButtons
+        });
+      } catch (err) { console.error('FicticionalTV TV: no se pudo iniciar el reproductor propio', err); }
+    }
+    if (o && host && !state.player) {   // respaldo: iframe de siempre
+      host.innerHTML = '<iframe id="player-frame" src="' + esc(withAutoplay(o.embed)) + '" allow="autoplay; fullscreen; encrypted-media; picture-in-picture; clipboard-write" allowfullscreen></iframe>';
+    }
+    if (state.player) {
+      var surface = state.player.root;
+      var ctl = $('[data-act="control"]');
+      if (!ctl) surface.focus();
+    }
+    wakeBar();
+  }
+  function updatePlayerButtons(ui) {
+    var sp = $('[data-act="speed"] span'); if (sp) sp.textContent = 'Velocidad: ' + (ui.rate === 1 ? '1' : ui.rate) + '×';
+    var q = $('[data-act="quality"]');
+    if (q) {
+      q.style.display = ui.qualities && ui.qualities.length > 1 ? '' : 'none';
+      var qs = $('span', q); if (qs && ui.qualities && ui.qualities.length) qs.textContent = 'Calidad: ' + ui.qualities[ui.quality];
+    }
+  }
+  function setBarState(on) {
+    var root = $('#player-root'); if (root) root.classList.toggle('bar-on', on);
+  }
   function wakeBar() {
     var bar = $('#player-bar'); if (!bar) return;
     clearTimeout(state.barTimer);
-    bar.classList.remove('hidden'); state.barHidden = false;
+    bar.classList.remove('hidden'); state.barHidden = false; setBarState(true);
     if (bar.dataset.autohide === '1') {
-      state.barTimer = setTimeout(function () { bar.classList.add('hidden'); state.barHidden = true; }, 6000);
+      state.barTimer = setTimeout(function () {
+        bar.classList.add('hidden'); state.barHidden = true; setBarState(false);
+        // Si el foco quedó en la barra (ya invisible), vuelve al video.
+        if (state.player && bar.contains(document.activeElement)) state.player.root.focus();
+      }, 6000);
     }
+  }
+
+  /* Teclas con el reproductor propio: sobre el video, ◄ ► adelantan/retroceden 10 s,
+     OK pausa o reanuda, ▲ abre la barra superior y ▼ salta a "Saltar intro" /
+     "Siguiente episodio" cuando aparecen. */
+  function overlayFocusable(root) {
+    return root.querySelector('.ftvp-skip.is-on, .ftvp-next:not([hidden]) button, .ftvp-end:not([hidden]) button, .ftvp-error:not([hidden]) button');
+  }
+  function handlePlayerKey(k, e) {
+    var P = state.player, root = P.root, ae = document.activeElement;
+    var inBar = !!(ae && ae.closest && ae.closest('#player-bar'));
+    var inOverlay = !!(ae && ae !== root && root.contains(ae));
+    P.wake(); wakeBar();
+    if (k === 'back') return false;
+    e.preventDefault();
+    if (!inBar && !inOverlay) {                       // el foco está en el video
+      if (ae !== root) root.focus();
+      if (k === 'enter') P.toggle();
+      else if (k === 'left') P.seekBy(-10);
+      else if (k === 'right') P.seekBy(10);
+      else if (k === 'up') { var f = $('#player-bar .focusable'); if (f) f.focus(); }
+      else if (k === 'down') { var o = overlayFocusable(root); if (o) o.focus(); }
+      return true;
+    }
+    if (k === 'enter') { ae.click(); return true; }
+    if (inBar) { if (k === 'down') root.focus(); else move(k); return true; }
+    if (k === 'left' || k === 'right') move(k); else root.focus();
+    return true;
   }
 
   /* ----------------------------------------------------------- Detalles (modal) */
@@ -605,6 +688,8 @@
 
   function render(keep) {
     clearTimeout(state.barTimer); clearTimeout(state.heroTimer);
+    if (state.player) { try { state.player.destroy(); } catch (err) {} state.player = null; }
+    state.pendingPlayer = null;
     state.isPlayer = false; state.barHidden = false;
     if (state.modal) closeModal();
 
@@ -779,8 +864,13 @@
     }
     if (!k) return;
 
-    // Reproductor: si la barra estaba oculta, la primera tecla solo la muestra.
-    if (state.isPlayer) {
+    // Reproductor propio: maneja ◄ ► OK ▲ ▼ directamente (Atrás sigue saliendo).
+    if (state.isPlayer && state.player) {
+      if (handlePlayerKey(k, e)) return;
+    }
+
+    // Reproductor básico (iframe): si la barra estaba oculta, la primera tecla solo la muestra.
+    else if (state.isPlayer) {
       var wasHidden = state.barHidden;
       wakeBar();
       if (wasHidden && k !== 'back') { e.preventDefault(); return; }
@@ -819,8 +909,10 @@
         e.preventDefault();
         if (state.navCount > 1) history.back(); else location.hash = t.getAttribute('href');
         break;
+      case 'speed': if (state.player) { state.player.cycleRate(); } break;
+      case 'quality': if (state.player) { var ql = state.player.cycleQuality(); if (ql) toast('Calidad: ' + ql, 1800); } break;
       case 'control': {
-        var f = $('#player-frame');
+        var f = $('#player-frame') || $('.ftvp iframe');
         if (f) { f.focus(); try { f.contentWindow.focus(); } catch (err) {} }
         var bar = $('#player-bar');
         if (bar) { clearTimeout(state.barTimer); bar.classList.add('hidden'); state.barHidden = true; }
