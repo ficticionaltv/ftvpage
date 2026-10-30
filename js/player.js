@@ -361,6 +361,10 @@
 
     constructor(container, opts) {
       this.container = container;
+      // Modo TV: sin atajos de teclado propios (los maneja tv/js/tv.js con el
+      // control remoto), sin botones en la barra y con los botones flotantes
+      // (saltar intro, siguiente, etc.) enfocables con las flechas.
+      this.tv = !!(opts && opts.tv);
       this.prefs = Object.assign({ vol: 1, muted: false, autoNext: true }, readJSON(LS_PREFS, {}));
       this.adapter = null;
       this.opts = {};
@@ -375,6 +379,7 @@
       this.pendingResume = null;
 
       this._buildDom();
+      if (this.tv) this._markTv();
       this._bindUi();
       this._bindGlobal();
       this.load(opts);
@@ -536,10 +541,48 @@
 
     _bindGlobal() {
       this._onKey = ev => this._keydown(ev);
-      document.addEventListener("keydown", this._onKey);
+      if (!this.tv) document.addEventListener("keydown", this._onKey);
       this._onHide = () => this._saveProgress();
       window.addEventListener("pagehide", this._onHide);
       document.addEventListener("visibilitychange", () => { if (document.hidden) this._saveProgress(); });
+    }
+
+    _markTv() {
+      const r = this.root;
+      r.classList.add("ftvp-tv", "focusable");
+      r.setAttribute("data-fk", "p:surface");
+      const mark = (sel, fk) => {
+        const b = r.querySelector(sel);
+        if (b) { b.classList.add("focusable"); b.setAttribute("data-fk", fk); }
+      };
+      mark(".ftvp-skip", "p:skip");
+      mark('[data-act="next-now"]', "p:next-now");
+      mark('[data-act="next-cancel"]', "p:next-cancel");
+      mark('[data-act="replay"]', "p:replay");
+      mark('[data-act="retry"]', "p:retry");
+    }
+    /* Pone el foco en el primer botón visible de una capa (modo TV). */
+    _focusOverlay(box) {
+      if (!this.tv || !box) return;
+      const b = box.querySelector("button:not([hidden])");
+      if (b) setTimeout(() => { try { b.focus(); } catch (e) { /* */ } }, 0);
+    }
+    wake() { this._wake(); }
+    cycleRate() {
+      if (!this.adapter) return 1;
+      const cur = this.adapter.rate();
+      let i = RATES.findIndex(r => Math.abs(r - cur) < 0.01);
+      i = (i + 1) % RATES.length;
+      this.adapter.rate(RATES[i]);
+      return RATES[i];
+    }
+    cycleQuality() {
+      if (!this.adapter) return null;
+      const list = this.adapter.qualities();
+      if (list.length < 2) return null;
+      const i = (this.adapter.quality() + 1) % list.length;
+      this.adapter.setQuality(i);
+      return list[i];
     }
 
     /* -------------------- carga de una fuente -------------------- */
@@ -600,9 +643,10 @@
       root.classList.toggle("is-yt", info.type === "youtube");
 
       // Preferencias guardadas
-      ad.volume(this.prefs.vol);
-      ad.muted(this.prefs.muted);
-      this.el.volRange.value = this.prefs.muted ? 0 : this.prefs.vol;
+      // En TV el volumen lo controla el control remoto: siempre con sonido.
+      ad.volume(this.tv ? 1 : this.prefs.vol);
+      ad.muted(this.tv ? false : this.prefs.muted);
+      this.el.volRange.value = this.tv ? 1 : (this.prefs.muted ? 0 : this.prefs.vol);
       this.el.pipBtn.hidden = !ad.canPip;
 
       ad.on("play", () => { root.classList.remove("is-paused", "has-ended"); root.classList.add("is-playing"); this._hideEnd(); this._wake(); });
@@ -862,7 +906,7 @@
       clearTimeout(this.idleTimer);
       this.idleTimer = setTimeout(() => {
         if (this.adapter && !this.adapter.paused() && this.el.menu.hidden && !this.dragging) this._sleep();
-      }, 2800);
+      }, this.tv ? 4500 : 2800);
     }
     _sleep() { this.root.classList.add("is-idle-ui"); }
 
@@ -874,6 +918,9 @@
     _closeMenu() { this.el.menu.hidden = true; }
     _renderMenu() {
       const ad = this.adapter, m = this.el.menu;
+      if (typeof this.opts.onUi === "function") {
+        try { this.opts.onUi({ rate: ad ? ad.rate() : 1, qualities: ad ? ad.qualities() : [], quality: ad ? ad.quality() : 0 }); } catch (e) { /* */ }
+      }
       if (!ad) { m.innerHTML = ""; return; }
       const rate = ad.rate();
       const rates = RATES.map(r => `<button type="button" class="ftvp-chip ${Math.abs(r - rate) < 0.01 ? "is-on" : ""}" data-rate="${r}">${r === 1 ? "Normal" : r + "×"}</button>`).join("");
@@ -910,7 +957,8 @@
       const n = this.opts.next;
       if (n) {
         this.el.nextBox.hidden = false;
-        if (this.prefs.autoNext) {
+        this._focusOverlay(this.el.nextBox);
+        if (this.prefs.autoNext || this.tv) {
           let left = NEXT_COUNTDOWN;
           this.el.nextCount.textContent = `Empieza en ${left} s`;
           clearInterval(this.nextTimer);
@@ -924,12 +972,14 @@
         }
       } else {
         this.el.end.hidden = false;
+        this._focusOverlay(this.el.end);
       }
     }
     _cancelNext() {
       clearInterval(this.nextTimer);
       this.el.nextBox.hidden = true;
       this.el.end.hidden = false;
+      this._focusOverlay(this.el.end);
     }
     _goNext() {
       clearInterval(this.nextTimer);
@@ -946,6 +996,7 @@
       this.root.classList.remove("is-loading", "is-waiting");
       this.root.classList.add("is-error");
       this.el.error.hidden = false;
+      this._focusOverlay(this.el.error);
       this.el.error.querySelector("p").textContent = msg || "No se pudo reproducir este video.";
       const retry = this.el.error.querySelector('[data-act="retry"]');
       retry.hidden = !this.opts.src;
@@ -982,6 +1033,7 @@
       writeJSON(LS_PROGRESS, map);
     }
     _savePrefs() {
+      if (this.tv) return;
       if (this.adapter) { this.prefs.vol = this.adapter.volume(); this.prefs.muted = this.adapter.muted(); }
       writeJSON(LS_PREFS, this.prefs);
     }
