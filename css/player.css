@@ -20,7 +20,7 @@
 /* ---- Logo de canal (esquina superior izquierda) ---- */
 .ftvp-logo {
   position: absolute; z-index: 6;
-  top: clamp(10px, 3.2%, 34px); left: clamp(10px, 2.2%, 34px);
+  top: clamp(10px, 3.2%, 34px); right: clamp(10px, 2.2%, 100px);
   height: clamp(18px, 3.7cqw, 36px); width: auto;
   opacity: .88; pointer-events: none;
   filter: drop-shadow(0 1px 3px rgba(0,0,0,.65));
