@@ -1,0 +1,106 @@
+/* ==========================================================================
+   FicticionalTV · versión TV — estilos del reproductor propio (js/player.js)
+   Versión compatible con navegadores de TV antiguos (Chromium 60+): sin
+   inset, gap en flex, container queries ni :has(). Todo en rem (1rem ≈ 1/192
+   del ancho, igual que el resto de la versión TV).
+   ========================================================================== */
+.ftvp {
+  position: absolute; left: 0; top: 0; right: 0; bottom: 0; z-index: 1;
+  background: #000; color: #fff; overflow: hidden; outline: none;
+  user-select: none; -webkit-user-select: none;
+}
+.ftvp-stage, .ftvp-click { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.ftvp-click { z-index: 2; }
+.ftvp-stage > div { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.ftvp-stage video, .ftvp-stage iframe {
+  position: absolute; left: 0; top: 0; width: 100%; height: 100%; border: 0; background: #000; object-fit: contain;
+}
+.ftvp.is-iframe .ftvp-click, .ftvp.is-iframe .ftvp-controls, .ftvp.is-iframe .ftvp-shade, .ftvp.is-iframe .ftvp-bigplay { display: none; }
+.ftvp.is-idle-ui.is-playing { cursor: none; }
+
+/* Logo de canal: esquina superior izquierda, pequeño y con margen */
+.ftvp-logo {
+  position: absolute; z-index: 6; left: 3.2rem; top: 2.6rem; height: 5.4rem; width: auto;
+  opacity: .88; pointer-events: none; transition: opacity .2s;
+}
+.player.bar-on .ftvp-logo { opacity: 0; }
+
+.ftvp-spinner {
+  position: absolute; z-index: 5; left: 50%; top: 50%; width: 9rem; height: 9rem; margin: -4.5rem 0 0 -4.5rem;
+  border: .9rem solid rgba(255,255,255,.14); border-top-color: #ff1111; border-radius: 50%;
+  animation: ftvp-spin .9s linear infinite; opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.ftvp.is-waiting .ftvp-spinner, .ftvp.is-loading .ftvp-spinner { opacity: 1; }
+@keyframes ftvp-spin { to { transform: rotate(360deg); } }
+
+/* Indicador de pausa (no interactivo) */
+.ftvp-bigplay {
+  position: absolute; z-index: 5; left: 50%; top: 50%; width: 13rem; height: 13rem; margin: -6.5rem 0 0 -6.5rem; padding: 0;
+  display: none; align-items: center; justify-content: center; border: 0; border-radius: 50%;
+  background: rgba(255,17,17,.92); color: #fff; pointer-events: none;
+}
+.ftvp-bigplay svg { width: 6rem; height: 6rem; margin-left: .8rem; }
+.ftvp.is-paused:not(.is-loading):not(.has-ended):not(.is-error):not(.is-iframe) .ftvp-bigplay { display: flex; }
+.ftvp.is-waiting .ftvp-bigplay { display: none !important; }
+
+/* Barra inferior: progreso + tiempo (los botones se manejan con el control) */
+.ftvp-shade { position: absolute; left: 0; right: 0; bottom: 0; height: 28rem; z-index: 3; pointer-events: none; background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.85)); transition: opacity .25s; }
+.ftvp-controls { position: absolute; left: 0; right: 0; bottom: 0; z-index: 7; padding: 0 6rem 4.6rem; transition: opacity .25s; }
+.ftvp.is-idle-ui.is-playing .ftvp-controls, .ftvp.is-idle-ui.is-playing .ftvp-shade { opacity: 0; }
+.ftvp-seek { position: relative; height: 3rem; display: flex; align-items: center; }
+.ftvp-seek-track { position: relative; width: 100%; height: .9rem; border-radius: .5rem; background: rgba(255,255,255,.25); overflow: hidden; }
+.ftvp-buf, .ftvp-prog { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: left center; transform: scaleX(0); }
+.ftvp-buf { background: rgba(255,255,255,.38); }
+.ftvp-prog { background: #ff1111; }
+.ftvp-knob { position: absolute; top: 50%; left: 0; width: 2.4rem; height: 2.4rem; margin: -1.2rem 0 0 -1.2rem; border-radius: 50%; background: #ff1111; box-shadow: 0 0 0 .5rem rgba(255,17,17,.3); pointer-events: none; }
+.ftvp-tip { display: none; }
+.ftvp-row { display: flex; align-items: center; }
+.ftvp-row > *:not(.ftvp-time) { display: none; }
+.ftvp-time { margin: .6rem 0 0; font-size: 2.8rem; font-weight: 600; }
+.ftvp-sep { opacity: .6; }
+.ftvp-menu { display: none !important; }
+
+.ftvp-toast {
+  position: absolute; z-index: 8; left: 50%; top: 14%; transform: translateX(-50%); max-width: 80%;
+  padding: 1.2rem 2.6rem; border-radius: 1.2rem; font-size: 3rem; font-weight: 600; text-align: center;
+  background: rgba(0,0,0,.8); opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.ftvp-toast.is-on { opacity: 1; }
+.ftvp-toast button { display: none; }
+
+/* Saltar intro / siguiente / fin / error: botones enfocables con las flechas */
+.ftvp-skip {
+  position: absolute; z-index: 8; right: 6rem; bottom: 16rem; display: none; align-items: center;
+  padding: 1.8rem 3.4rem; border: .3rem solid rgba(255,255,255,.9); border-radius: 1.2rem;
+  background: rgba(0,0,0,.65); color: #fff; font: 600 3rem Inter, sans-serif;
+}
+.ftvp-skip svg { width: 3rem; height: 3rem; margin-left: 1.2rem; }
+.ftvp-skip.is-on { display: flex; }
+.ftvp-skip.is-on::after { content: "\25BC"; font-size: 2rem; margin-left: 1.4rem; opacity: .75; }
+.ftvp-next, .ftvp-end, .ftvp-error { position: absolute; z-index: 9; }
+.ftvp-next[hidden], .ftvp-end[hidden], .ftvp-error[hidden] { display: none; }
+.ftvp-next {
+  right: 6rem; bottom: 16rem; width: 68rem; padding: 3rem 3.4rem; border-radius: 1.6rem;
+  background: rgba(16,16,22,.95); border: .2rem solid rgba(255,255,255,.18);
+}
+.ftvp-next-kicker { display: block; font-size: 2.2rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1rem; color: #ffde00; }
+.ftvp-next-title { display: block; margin-top: .6rem; font-size: 3.4rem; line-height: 1.25; }
+.ftvp-next-count { display: block; min-height: 3.4rem; margin-top: .6rem; font-size: 2.6rem; color: #a8a8b6; }
+.ftvp-next-actions { display: flex; margin-top: 2rem; }
+.ftvp-end { left: 0; top: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.6); }
+.ftvp-end[hidden] { display: none; }
+.ftvp-error { left: 0; top: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 4rem; background: rgba(10,10,14,.92); font-size: 3.2rem; color: #a8a8b6; }
+.ftvp-error[hidden] { display: none; }
+.ftvp-error .ftvp-next-actions { justify-content: center; }
+.ftvp-btn-primary, .ftvp-btn-ghost {
+  display: flex; align-items: center; justify-content: center; margin-right: 1.8rem; padding: 1.8rem 3.4rem;
+  border-radius: 1.2rem; font: 600 2.8rem Inter, sans-serif; color: #fff; text-decoration: none; cursor: pointer;
+  border: .3rem solid transparent;
+}
+.ftvp-btn-primary { background: #ff1111; border-color: #ff1111; }
+.ftvp-btn-ghost { background: transparent; border-color: rgba(255,255,255,.45); }
+.ftvp-btn-ghost[hidden] { display: none; }
+.ftvp-btn-primary svg { width: 3.2rem; height: 3.2rem; margin-right: 1.2rem; }
+.ftvp .focusable:focus { background: #fff; color: #111; border-color: #fff; box-shadow: 0 0 0 .4rem rgba(255,222,0,.95); outline: none; }
+.ftvp-skip:focus svg { color: #111; }
+.ftvp.focusable:focus { background: #000; box-shadow: none; }
