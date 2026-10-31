@@ -244,6 +244,11 @@ button { font-family: inherit; }
   .nav-toggle { display: block; }
   .nav-search-toggle { display: block; }
 
+  /* En escritorio el buscador (margin-left:auto) empuja todo a la derecha;
+     en móvil el buscador está oculto, así que son los botones (lupa +
+     hamburguesa) los que deben empujarse al borde derecho. */
+  .nav-actions { margin-left: auto; }
+
   /* El buscador móvil se muestra como un panel justo debajo del header
      (76px de alto), sin empujar el contenido del header. El menú de
      navegación es ahora un panel lateral (.mnav, más abajo). */
@@ -676,6 +681,16 @@ body.nav-lock-scroll .site-header { backdrop-filter: none; }
   color: #fff;
   text-shadow: 0 1px 4px rgba(0,0,0,.65);
 }
+/* Categoría con imagen personalizada (se edita en Admin → Categorías) */
+.genre-card.has-image {
+  background-color: var(--surface);
+  background-size: cover;
+  background-position: center;
+}
+.genre-card.has-image::before {
+  background: linear-gradient(0deg, rgba(0,0,0,.78) 0%, rgba(0,0,0,.12) 65%);
+}
+.genre-card.has-image:hover::before { opacity: .75; }
 .genre-card.is-active { border-color: var(--primary); }
 .genre-card.is-active::after {
   content: "";
@@ -1567,3 +1582,49 @@ body.nav-lock-scroll .site-header { backdrop-filter: none; }
 @media (prefers-reduced-motion: reduce) {
   .mnav, .mnav-backdrop, .mnav-panel { transition: none; }
 }
+
+/* ---------------------------------------------------------------------- */
+/* Panel de administración — imágenes de categorías                       */
+/* ---------------------------------------------------------------------- */
+.admin-genre-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+.admin-genre-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  border-radius: var(--radius);
+}
+.admin-genre-preview {
+  position: relative;
+  height: 110px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(255,17,17,.55), rgba(255,222,0,.3)),
+    var(--bg);
+  background-size: cover;
+  background-position: center;
+}
+.admin-genre-preview.has-image::before {
+  content: "";
+  position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+  background: linear-gradient(0deg, rgba(0,0,0,.78) 0%, rgba(0,0,0,.12) 65%);
+}
+.admin-genre-preview span {
+  position: absolute; left: 12px; bottom: 10px;
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,.65);
+}
+.admin-genre-card .input { width: 100%; }
+.admin-genre-status { min-height: 1.1em; font-size: .8rem; color: var(--text-muted); }
+.admin-genre-status.is-error { color: #FF6B6B; }
+.admin-genre-status.is-ok { color: #5FD38D; }
