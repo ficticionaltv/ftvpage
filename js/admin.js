@@ -87,6 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // ANIME_LIST llega de forma asíncrona desde Firestore.
       onLibraryReady(() => initAdminPanel());
       onLibraryReady(() => { if (typeof initAdminExtrasPanel === "function") initAdminExtrasPanel(); });
+      onLibraryReady(() => { if (typeof initAdminCategoriesPanel === "function") initAdminCategoriesPanel(); });
     }
   }
 

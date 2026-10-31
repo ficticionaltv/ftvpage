@@ -12,22 +12,27 @@ document.addEventListener("DOMContentLoaded", () => {
   // Los resultados por género dependen de ANIME_LIST, que llega de forma
   // asíncrona desde Firestore.
   onLibraryReady(() => {
+    renderGenreGrid();   // las imágenes de categorías también llegan de Firestore
     if (preset && GENRES.includes(preset)) {
       selectGenre(preset);
     }
   });
   onLibraryChange(() => {
+    renderGenreGrid();
     if (activeGenre) selectGenre(activeGenre);
   });
 });
 
 function renderGenreGrid() {
   const grid = document.querySelector("#genre-grid");
-  grid.innerHTML = GENRES.map(g => `
-    <button class="genre-card" data-genre="${g}">
+  grid.innerHTML = GENRES.map(g => {
+    const img = getGenreImage(g);
+    return `
+    <button class="genre-card${img ? " has-image" : ""}${g === activeGenre ? " is-active" : ""}" data-genre="${g}"${img ? ` style="background-image:${cssUrl(img)}"` : ""}>
       <span>${g}</span>
     </button>
-  `).join("");
+  `;
+  }).join("");
 
   grid.querySelectorAll("[data-genre]").forEach(btn => {
     btn.addEventListener("click", () => selectGenre(btn.dataset.genre));

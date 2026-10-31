@@ -261,6 +261,10 @@ function normalizeExtraItemRecord(extraId, kind, item) {
    mientras llega la primera respuesta real de Firestore. */
 let ANIME_LIST = cloneSeedLibrary().map(normalizeAnimeRecord);
 let EXTRAS_LIST = cloneSeedExtras();
+/* Imágenes de las tarjetas de Categorías: { "Acción": "https://…", … }.
+   Se editan desde Admin → Categorías y viajan en el mismo documento de
+   Firestore que los animes y los extras. */
+let GENRE_IMAGES = {};
 let libraryReady = false;
 
 /* "connecting" mientras esperamos la primera respuesta, "online" en
@@ -324,6 +328,7 @@ function startLibrarySync() {
       return ref.set({
         items: serializeLibrary(cloneSeedLibrary()),
         extras: cloneSeedExtras(),
+        genreImages: {},
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
     }
@@ -337,6 +342,7 @@ function startLibrarySync() {
       const data = docSnap.data();
       ANIME_LIST = Array.isArray(data.items) ? data.items.map(normalizeAnimeRecord) : [];
       EXTRAS_LIST = Array.isArray(data.extras) ? data.extras.map(normalizeExtraRecord) : [];
+      GENRE_IMAGES = normalizeGenreImages(data.genreImages);
     }
     const firstLoad = !libraryReady;
     libraryReady = true;
@@ -376,6 +382,7 @@ function persist() {
   libraryDocRef().set({
     items: serializeLibrary(ANIME_LIST),
     extras: EXTRAS_LIST,
+    genreImages: GENRE_IMAGES,
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   }).catch(err => {
     console.warn("FicticionalTV: no se pudo guardar la biblioteca en Firebase.", err);
@@ -384,6 +391,43 @@ function persist() {
 
 function getAnimeById(id) {
   return ANIME_LIST.find(a => a.id === id);
+}
+
+/* ------------------------------------------------------------
+   Imágenes de categorías
+   ------------------------------------------------------------ */
+function normalizeGenreImages(raw) {
+  const out = {};
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
+    Object.keys(raw).forEach(k => {
+      const v = raw[k];
+      if (typeof v === "string" && /^https?:\/\//i.test(v.trim())) out[k] = v.trim();
+    });
+  }
+  return out;
+}
+
+function getGenreImage(genre) {
+  return GENRE_IMAGES[genre] || null;
+}
+
+/* Guarda (o quita, si la URL viene vacía) la imagen de una categoría. */
+function setGenreImage(genre, url) {
+  const clean = typeof url === "string" ? url.trim() : "";
+  if (clean) {
+    if (!/^https?:\/\//i.test(clean)) return false;
+    GENRE_IMAGES[genre] = clean;
+  } else {
+    delete GENRE_IMAGES[genre];
+  }
+  persist();
+  return true;
+}
+
+/* Valor seguro para usar dentro de url('…') en un atributo style. */
+function cssUrl(url) {
+  const esc = ch => "%" + ch.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0");
+  return "url('" + String(url).replace(/['"()<>\\\s]/g, esc) + "')";
 }
 
 /* ¿El anime tiene al menos un episodio en alguna de sus temporadas? */
